@@ -1,68 +1,67 @@
-# play 5 minutes
+# Grilled — refaktorointi Makkarasta
 
-A portfolio of small games. None longer than five minutes.
+Iso muutossarja:
+- Poistettu kielikerros (vain englanti)
+- Nimi: Sausage → **Grilled**
+- URL: `/makkara` → `/grilled` (vanha reititetään automaattisesti uuteen)
+- Kansio: `src/games/makkara/` → `src/games/grilled/`
+- CSS-luokat: `.makkara-*` → `.grilled-*`
+- Supabase `game_id`: `makkara` → `grilled` (tulostaulu alkaa tyhjänä)
+- Kielivalinta poistettu UI:sta — jäljelle jää vain 🔊/🔇 mute-nappi
 
-Built with React + Vite + TypeScript, database on Supabase, hosted on Cloudflare Pages.
+## Asennus
 
-## Development
+### 1. Poista vanha kansio
 
-```bash
-npm install
-cp .env.example .env.local   # fill in your Supabase values
+```
+rm -rf src/games/makkara
+```
+
+Tai Windowsilla: poista File Explorerissa koko `src\games\makkara`-kansio.
+
+### 2. Pura tämä zippi projektikansion juureen
+
+Zip sisältää:
+- `src/App.tsx` — korvaa olemassa olevan
+- `src/pages/Home.tsx` — korvaa olemassa olevan
+- `src/games/grilled/` — koko uusi kansio
+
+Varmista että `grill.mp3` on edelleen `public/grill.mp3` — sitä ei tarvitse siirtää.
+
+### 3. Testaa paikallisesti
+
+```
 npm run dev
 ```
 
-## Build
+Avaa `http://localhost:5173`:
+- Etusivulla näkyy "Grilled" (ei enää "Sausage")
+- Klikkaa kortti tai mene osoitteeseen `/grilled`
+- Oikeassa yläkulmassa vain yksi nappi: 🔊/🔇
+- Selaimen välilehden otsikko pelin aikana: "Grilled · play 5 minutes"
+- Tulostaulu on tyhjä (uusi `game_id='grilled'`)
 
-```bash
-npm run build   # outputs to dist/
-npm run preview # preview the build locally
+Testaa myös `/makkara` — pitäisi ohjautua `/grilled`iin automaattisesti.
+
+### 4. Pushaa tuotantoon
+
+```
+git add .
+git rm -r src/games/makkara   # jos git ei automaattisesti huomannut poistoa
+git commit -m "Refactor: Sausage → Grilled, English only, /grilled route"
+git push
 ```
 
-## Structure
+Cloudflare buildaa automaattisesti.
 
-```
-src/
-├── App.tsx              # Router and layout
-├── pages/
-│   └── Home.tsx         # Landing page with game list
-├── games/
-│   └── makkara/
-│       └── Makkara.tsx  # Sausage game
-└── shared/
-    └── supabase.ts      # Database client and helpers
-```
+## Huomioita
 
-## Supabase schema
-
-Run this in the SQL editor of your Supabase project:
+**Vanhat Supabase-tulokset:** Ne jäävät tietokantaan `game_id='makkara'`-arvolla mutta eivät näy enää tulostaulussa. Jos haluat siivota:
 
 ```sql
-create table scores (
-  id uuid primary key default gen_random_uuid(),
-  game_id text not null,
-  name text not null check (length(name) between 1 and 16),
-  score numeric not null,
-  meta jsonb default '{}'::jsonb,
-  created_at timestamptz default now()
-);
-
-create index scores_game_score_idx on scores (game_id, score desc, created_at asc);
-
-alter table scores enable row level security;
-
-create policy "scores readable by anyone"
-  on scores for select using (true);
-
-create policy "scores insertable by anyone"
-  on scores for insert with check (true);
+delete from scores where game_id = 'makkara';
 ```
 
-## Deployment
+Tämä on valinnaista — rivit ovat muuten harmittomia.
 
-1. Push to GitHub
-2. Cloudflare Pages → Connect to Git → select repo
-3. Build command: `npm run build`
-4. Output directory: `dist`
-5. Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-6. Add custom domain: `play5minutes.com`
+**localStorage:** Vanhat avaimet `makkara-lang` ja `makkara-muted` jäävät käyttäjien selaimiin orpoiksi mutta eivät aiheuta ongelmia. Uusi mute-asetus tallentuu `grilled-muted`-avaimella.

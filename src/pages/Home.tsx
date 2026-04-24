@@ -4,10 +4,10 @@ import { supabase } from '../shared/supabase';
 
 const GAMES = [
   {
-    id: 'makkara',
-    title: 'Sausage',
+    id: 'grilled',
+    title: 'Grilled',
     subtitle: 'a grilling simulator about acceptance',
-    path: '/makkara',
+    path: '/grilled',
     duration: '~3 min',
   },
 ];

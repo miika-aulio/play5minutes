@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
-import Makkara from './games/makkara/Makkara';
+import Grilled from './games/grilled/Grilled';
 import './App.css';
 
 export default function App() {
@@ -13,7 +13,9 @@ export default function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/makkara" element={<Makkara />} />
+            <Route path="/grilled" element={<Grilled />} />
+            {/* Vanhan polun ohjaus uuteen — varmuuden vuoksi */}
+            <Route path="/makkara" element={<Navigate to="/grilled" replace />} />
           </Routes>
         </main>
       </div>
