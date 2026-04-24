@@ -45,9 +45,11 @@
   z-index: 200;
 }
 
-.grilled-mute-toggle:hover {
-  border-color: var(--ember);
-  background: rgba(232, 132, 74, 0.1);
+@media (hover: hover) {
+  .grilled-mute-toggle:hover {
+    border-color: var(--ember);
+    background: rgba(232, 132, 74, 0.1);
+  }
 }
 
 /* --- BUTTONS --- */
@@ -64,11 +66,17 @@
   transition: all 0.3s;
 }
 
-.grilled-btn:hover:not(:disabled),
+@media (hover: hover) {
+  .grilled-btn:hover:not(:disabled) {
+    background: var(--ember-deep);
+    border-color: var(--ember);
+    letter-spacing: 0.3em;
+  }
+}
+
 .grilled-btn:active:not(:disabled) {
   background: var(--ember-deep);
   border-color: var(--ember);
-  letter-spacing: 0.3em;
 }
 
 .grilled-btn:disabled {
@@ -92,7 +100,9 @@
   transition: color 0.3s;
 }
 
-.grilled-btn-link:hover { color: var(--ember); }
+@media (hover: hover) {
+  .grilled-btn-link:hover { color: var(--ember); }
+}
 
 /* --- TITLE SCREEN --- */
 .grilled-title {
@@ -409,11 +419,17 @@
   animation-delay: var(--d, 0ms);
 }
 
-.grilled-choice:hover:not(:disabled),
+@media (hover: hover) {
+  .grilled-choice:hover:not(:disabled) {
+    border-color: var(--ember);
+    background: rgba(232, 132, 74, 0.08);
+    transform: translateX(4px);
+  }
+}
+
 .grilled-choice:active:not(:disabled) {
   border-color: var(--ember);
   background: rgba(232, 132, 74, 0.08);
-  transform: translateX(4px);
 }
 
 .grilled-choice:disabled {

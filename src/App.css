@@ -44,7 +44,9 @@ a { color: inherit; }
   text-transform: uppercase;
   transition: color 0.3s;
 }
-.app-logo:hover { color: var(--ember); }
+@media (hover: hover) {
+  .app-logo:hover { color: var(--ember); }
+}
 
 .app-main { flex: 1; padding: 2rem 1.5rem; }
 
@@ -71,10 +73,12 @@ a { color: inherit; }
   text-decoration: none;
   transition: all 0.3s;
 }
-.game-card a:hover {
-  border-color: var(--ember);
-  background: rgba(232,132,74,0.05);
-  transform: translateX(4px);
+@media (hover: hover) {
+  .game-card a:hover {
+    border-color: var(--ember);
+    background: rgba(232,132,74,0.05);
+    transform: translateX(4px);
+  }
 }
 .game-card-head {
   display: flex;
@@ -136,4 +140,6 @@ a { color: inherit; }
   text-decoration: none;
   transition: color 0.3s;
 }
-.back-link:hover { color: var(--ember); }
+@media (hover: hover) {
+  .back-link:hover { color: var(--ember); }
+}
