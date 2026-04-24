@@ -1,0 +1,356 @@
+/* ============================================================
+   Makkara-pelin tyylit.
+   Kaikki luokat prefixillä .makkara- jotta eivät törmää
+   portfolion tai tulevien pelien tyylien kanssa.
+   Värimuuttujat (--cream, --ember jne.) tulevat App.css:stä.
+   ============================================================ */
+
+.makkara-container {
+  position: relative;
+  min-height: 70vh;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1rem 0;
+}
+
+/* --- LANG TOGGLE --- */
+.makkara-lang-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 0.4rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  z-index: 2;
+}
+
+.makkara-lang-toggle button {
+  background: transparent;
+  border: 1px solid rgba(138, 106, 74, 0.3);
+  color: var(--cream-dim);
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  transition: all 0.3s;
+}
+
+.makkara-lang-toggle button.active {
+  color: var(--cream);
+  border-color: var(--ember);
+  background: rgba(232, 132, 74, 0.06);
+}
+
+.makkara-lang-toggle button:hover:not(.active) {
+  color: var(--cream);
+}
+
+/* --- BUTTONS --- */
+.makkara-btn {
+  background: transparent;
+  border: 1px solid var(--bronze);
+  color: var(--cream);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  padding: 0.9rem 2rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.makkara-btn:hover:not(:disabled),
+.makkara-btn:active:not(:disabled) {
+  background: var(--ember-deep);
+  border-color: var(--ember);
+  letter-spacing: 0.3em;
+}
+
+.makkara-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.makkara-btn-primary {
+  margin-top: 2.5rem;
+}
+
+.makkara-btn-link {
+  background: transparent;
+  border: none;
+  color: var(--cream-dim);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: color 0.3s;
+}
+
+.makkara-btn-link:hover {
+  color: var(--ember);
+}
+
+/* --- TITLE SCREEN --- */
+.makkara-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.makkara-title-text {
+  font-weight: 500;
+  font-size: clamp(3.5rem, 12vw, 6rem);
+  letter-spacing: 0.01em;
+  line-height: 0.9;
+  color: var(--cream);
+  text-shadow: 0 0 40px rgba(232, 132, 74, 0.2);
+  animation: makkara-title-glow 4s ease-in-out infinite;
+}
+
+@keyframes makkara-title-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 40px rgba(232, 132, 74, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 60px rgba(232, 132, 74, 0.35);
+  }
+}
+
+.makkara-subtitle {
+  font-style: italic;
+  font-size: clamp(0.95rem, 3vw, 1.2rem);
+  color: var(--cream-dim);
+  margin-top: 0.5rem;
+  max-width: 26ch;
+}
+
+.makkara-epigraph {
+  margin-top: 2.5rem;
+  max-width: 30ch;
+  font-style: italic;
+  color: var(--cream-dim);
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+.makkara-epigraph cite {
+  display: block;
+  margin-top: 0.4rem;
+  font-style: normal;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+
+/* --- PLAY SCREEN (placeholder) --- */
+.makkara-play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.makkara-coming-soon {
+  text-align: center;
+  max-width: 32ch;
+}
+
+.makkara-coming-soon p {
+  color: var(--cream-dim);
+  font-style: italic;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+/* --- END SCREEN --- */
+.makkara-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1rem;
+  gap: 1.2rem;
+}
+
+.makkara-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+
+.makkara-end-title {
+  font-weight: 500;
+  font-size: clamp(2.2rem, 7vw, 3.5rem);
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: var(--cream);
+}
+
+.makkara-end-stats {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  padding-top: 1rem;
+  border-top: 1px solid rgba(138, 106, 74, 0.3);
+  width: 100%;
+  max-width: 26ch;
+}
+
+.makkara-submit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: 100%;
+  max-width: 28ch;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.makkara-name-input {
+  background: transparent;
+  border: 1px solid rgba(138, 106, 74, 0.35);
+  color: var(--cream);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  padding: 0.7rem 1rem;
+  text-align: center;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.makkara-name-input:focus {
+  border-color: var(--ember);
+}
+
+.makkara-submit-feedback {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.makkara-submit-feedback.ok {
+  color: var(--ember);
+}
+.makkara-submit-feedback.error {
+  color: var(--ember-deep);
+}
+
+.makkara-end-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 30ch;
+  margin-top: 1rem;
+}
+
+.makkara-end-actions .makkara-btn {
+  flex: 1;
+  padding: 0.9rem 1rem;
+}
+
+/* --- LEADERBOARD --- */
+.makkara-leaderboard {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 0.5rem;
+  gap: 1.2rem;
+}
+
+.makkara-lb-head {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.makkara-lb-body {
+  min-height: 200px;
+}
+
+.makkara-lb-msg {
+  text-align: center;
+  padding: 3rem 1rem;
+  font-style: italic;
+  color: var(--cream-dim);
+  max-width: 30ch;
+  margin: 0 auto;
+}
+
+.makkara-lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.makkara-lb-table th {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  text-align: left;
+  padding: 0.6rem 0.3rem;
+  border-bottom: 1px solid rgba(138, 106, 74, 0.3);
+  font-weight: 500;
+}
+
+.makkara-lb-table td {
+  padding: 0.7rem 0.3rem;
+  border-bottom: 1px solid rgba(138, 106, 74, 0.1);
+  color: var(--cream);
+}
+
+.makkara-lb-rank {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--cream-dim);
+  width: 2em;
+}
+
+.makkara-lb-name {
+  font-style: italic;
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.makkara-lb-verdict {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+}
+
+.makkara-lb-verdict.tier-5 {
+  color: var(--ember);
+}
+.makkara-lb-verdict.tier-4 {
+  color: var(--cream);
+}
+
+.makkara-lb-peace {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8rem;
+  text-align: right;
+}
