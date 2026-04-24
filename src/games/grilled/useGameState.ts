@@ -7,7 +7,7 @@ import { PROMPTS, RELEASE } from './gameData';
 //  VAKIOT
 // ═══════════════════════════════════════════════════════════════
 
-const TOTAL_SECONDS = 190; // ~3 min 10s
+const TOTAL_SECONDS = 300;
 const PHASE_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8] as const;
 
 const FIRST_PROMPT_DELAY = 800;
@@ -43,6 +43,7 @@ export type UIState = {
   doneness: number;
   peace: number;
   phaseIdx: number;
+  promptIdx: number;         // ← lisätty ääni-integraatiota varten
   choicesMade: number;
   phase: GamePhase;
   thought: string | null;
@@ -78,6 +79,7 @@ function initialUI(): UIState {
     doneness: 0,
     peace: 50,
     phaseIdx: 0,
+    promptIdx: 0,
     choicesMade: 0,
     phase: 'idle',
     thought: null,
@@ -150,6 +152,7 @@ export function useGameState() {
       doneness: m.doneness,
       peace: m.peace,
       phaseIdx: m.phaseIdx,
+      promptIdx: m.promptIdx,
       choicesMade: m.choicesMade,
       phase: m.phase,
       thought: deriveThought(m),
