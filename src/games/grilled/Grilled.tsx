@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGameState } from './useGameState';
 import { useGrillAudio } from './useGrillAudio';
+import { usePromptAudio } from './usePromptAudio';
 import { STRINGS } from './content';
 import TitleScreen from './screens/TitleScreen';
 import PlayScreen from './screens/PlayScreen';
@@ -16,7 +17,9 @@ export default function Grilled() {
   const grill = useGrillAudio();
   const L = STRINGS;
 
-  // Aseta selaimen välilehden otsikko tämän pelin ajaksi
+  // Monologin ääni — sama mute-tila kuin grill-äänellä
+  usePromptAudio(ui, grill.muted);
+
   useEffect(() => {
     const prev = document.title;
     document.title = 'Grilled · play 5 minutes';
@@ -25,7 +28,6 @@ export default function Grilled() {
     };
   }, []);
 
-  // Siirry automaattisesti End-ruutuun kun peli päättyy
   useEffect(() => {
     if (ui.phase === 'ended' && screen === 'play') {
       setScreen('end');

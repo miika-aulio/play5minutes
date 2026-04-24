@@ -1,67 +1,92 @@
-# Grilled — refaktorointi Makkarasta
+# Grilled — monologien ääniluenta
 
-Iso muutossarja:
-- Poistettu kielikerros (vain englanti)
-- Nimi: Sausage → **Grilled**
-- URL: `/makkara` → `/grilled` (vanha reititetään automaattisesti uuteen)
-- Kansio: `src/games/makkara/` → `src/games/grilled/`
-- CSS-luokat: `.makkara-*` → `.grilled-*`
-- Supabase `game_id`: `makkara` → `grilled` (tulostaulu alkaa tyhjänä)
-- Kielivalinta poistettu UI:sta — jäljelle jää vain 🔊/🔇 mute-nappi
+Tämä paketti lisää 15 monologiin ääniraidat. Käytetään ElevenLabs TTS-palvelua.
 
-## Asennus
+## Vaihe 1 — ElevenLabs-tili ja äänen valinta
 
-### 1. Poista vanha kansio
+1. Rekisteröidy osoitteessa [elevenlabs.io](https://elevenlabs.io) (free tier riittää ~10 000 merkkiä/kk)
+2. Avaa **Voice Library**, suodata:
+   - Language: **English**
+   - Gender: Male (tai naisääni, maku)
+   - Category: **Narration** tai **Audiobook**
+3. Esikuuntele ääniä testifraasilla: `"I had the makings of a bratwurst."`
+4. Valitse ääni joka kuulostaa **lakoniselta ja väsyneeltä**, ei dramaattiselta
+5. Klikkaa ääntä auki — kopioi **Voice ID** (löytyy URL:sta tai "View" -painikkeen kautta)
+
+Hyviä ehdokkaita testattavaksi:
+- Callum, Daniel, Clyde, George, Thomas (nimet voivat muuttua)
+
+## Vaihe 2 — API-avain
+
+1. ElevenLabs-dashboard → oikea yläkulma (profiilikuva) → **API Keys**
+2. Klikkaa **Create API Key** jos et vielä ole tehnyt
+3. Kopioi avain talteen (se näkyy vain kerran)
+
+## Vaihe 3 — Koodimuutokset
+
+Pura tämän zipin sisältö projektikansion juureen. Korvaa:
+
+- `src/games/grilled/useGameState.ts` (lisätty `promptIdx` UIStateen)
+- `src/games/grilled/Grilled.tsx` (kutsuu `usePromptAudio`a)
+
+Uudet tiedostot:
+
+- `src/games/grilled/usePromptAudio.ts`
+- `scripts/generate-audio.js`
+
+## Vaihe 4 — Generoi äänet
+
+Terminaalissa projektikansiossa (Windows cmd):
 
 ```
-rm -rf src/games/makkara
+set ELEVENLABS_API_KEY=sk_your_key_here
+set ELEVENLABS_VOICE_ID=your_voice_id_here
+node scripts\generate-audio.js
 ```
 
-Tai Windowsilla: poista File Explorerissa koko `src\games\makkara`-kansio.
+Tai PowerShell:
 
-### 2. Pura tämä zippi projektikansion juureen
+```
+$env:ELEVENLABS_API_KEY="sk_your_key_here"
+$env:ELEVENLABS_VOICE_ID="your_voice_id_here"
+node scripts\generate-audio.js
+```
 
-Zip sisältää:
-- `src/App.tsx` — korvaa olemassa olevan
-- `src/pages/Home.tsx` — korvaa olemassa olevan
-- `src/games/grilled/` — koko uusi kansio
+Skripti generoi 15 MP3-tiedostoa `public/audio/`-kansioon. Kestää ~30 sekuntia. Idempotentti — jos ajat uudelleen, olemassa olevat tiedostot ohitetaan.
 
-Varmista että `grill.mp3` on edelleen `public/grill.mp3` — sitä ei tarvitse siirtää.
+Jos haluat vaihtaa ääntä: poista `public/audio/`-kansion sisältö ja aja skripti uudelleen uudella `ELEVENLABS_VOICE_ID`:lla.
 
-### 3. Testaa paikallisesti
+## Vaihe 5 — Testaa paikallisesti
 
 ```
 npm run dev
 ```
 
-Avaa `http://localhost:5173`:
-- Etusivulla näkyy "Grilled" (ei enää "Sausage")
-- Klikkaa kortti tai mene osoitteeseen `/grilled`
-- Oikeassa yläkulmassa vain yksi nappi: 🔊/🔇
-- Selaimen välilehden otsikko pelin aikana: "Grilled · play 5 minutes"
-- Tulostaulu on tyhjä (uusi `game_id='grilled'`)
+Avaa `http://localhost:5173/grilled`, klikkaa "Step onto the grill":
+- Grillin ritinä alkaa
+- Kun ensimmäinen monologi ilmestyy, kuulet sen luettuna ääneen
+- Mute-nappi 🔊/🔇 vaikuttaa molempiin ääniin
 
-Testaa myös `/makkara` — pitäisi ohjautua `/grilled`iin automaattisesti.
-
-### 4. Pushaa tuotantoon
+## Vaihe 6 — Pushaa
 
 ```
 git add .
-git rm -r src/games/makkara   # jos git ei automaattisesti huomannut poistoa
-git commit -m "Refactor: Sausage → Grilled, English only, /grilled route"
+git commit -m "Add monologue voice audio (ElevenLabs TTS)"
 git push
 ```
 
-Cloudflare buildaa automaattisesti.
+Cloudflare buildaa, ja 1–2 min kuluttua äänet toimivat `play5minutes.com/grilled`:ssä.
 
 ## Huomioita
 
-**Vanhat Supabase-tulokset:** Ne jäävät tietokantaan `game_id='makkara'`-arvolla mutta eivät näy enää tulostaulussa. Jos haluat siivota:
+**Tiedostokoko:** 15 × ~50–150 KB = noin 1–2 MB lisää repoon. Hyväksyttävä.
 
-```sql
-delete from scores where game_id = 'makkara';
-```
+**Ääniasetukset:** `scripts/generate-audio.js`:ssä on `VOICE_SETTINGS`-olio. Säädä jos haluat eri sävyn:
+- `stability: 0.55` — matalampi (esim. 0.3) = ilmaisuvoimaisempi mutta epätasaisempi
+- `style: 0.35` — korkeampi (esim. 0.6) = enemmän tunnetta
 
-Tämä on valinnaista — rivit ovat muuten harmittomia.
+**Kustannus:** 15 monologia × ~50 merkkiä = ~750 merkkiä. Free tier kattaa helposti. Voit generoida moneen kertaan testaten eri ääniä ennen kuin 10 000 merkkiä täyttyy.
 
-**localStorage:** Vanhat avaimet `makkara-lang` ja `makkara-muted` jäävät käyttäjien selaimiin orpoiksi mutta eivät aiheuta ongelmia. Uusi mute-asetus tallentuu `grilled-muted`-avaimella.
+**Jos ääni ei soi tuotannossa:** varmista että `public/audio/`-kansion tiedostot ovat GitHubissa (`git status` paikallisesti, ja tarkista GitHubin web-käyttöliittymästä). Ilman niitä Cloudflaren build ei löydä niitä.
+
+**Monologin tekstin muuttaminen myöhemmin:** jos muokkaat `gameData.ts`:n monologeja, muista myös päivittää `scripts/generate-audio.js`:n `PROMPTS`-taulukko ja regeneroida äänet (poista vanhat `public/audio/`:sta ja aja skripti).
