@@ -1,0 +1,426 @@
+// Kaikki Makkara-pelin sisältödata: monologit, valinnat, ambient-rivit,
+// päätökset ja "päästä irti"-kehote. Jaettuna kielittäin (fi/en).
+//
+// Tietojen muoto pidetty yksinkertaisena (ei Nested Record<Language,...>-
+// tasoja syvemmäksi) jotta lisäkieliä on helppo lisätä.
+
+import type { Language, EndingKey } from './content';
+
+export type Choice = {
+  text: string;
+  d: number;            // delta mielenrauhaan
+  release?: boolean;    // vain Vapautunut-polku asettaa tämän
+};
+
+export type Prompt = {
+  text: string;
+  choices: Choice[];
+};
+
+export type PhaseContent = {
+  prompts: Prompt[];
+  ambient: string[];
+};
+
+export type ReleaseContent = {
+  thought: string;
+  yes: string;
+  no: string;
+};
+
+export type EndingContent = {
+  title: string;
+  text: string;
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  PROMPTS (5 vaihetta x 3 monologia + ambient-rivit)
+// ═══════════════════════════════════════════════════════════════
+
+export const PROMPTS: Record<Language, PhaseContent[]> = {
+  fi: [
+    // Phase 1: Kieltäminen
+    {
+      prompts: [
+        {
+          text: 'Tämä lämpö on… luulen että kuvittelen sen.',
+          choices: [
+            { text: 'Ei mitään tapahdu.', d: +5 },
+            { text: 'Jotain on pielessä.', d: -3 },
+          ],
+        },
+        {
+          text: 'Kasvoin pakastimessa. Tämä on varmasti vain toinen huone.',
+          choices: [
+            { text: 'Niin varmaan.', d: +5 },
+            { text: 'Ovi ei avaudu enää.', d: -3 },
+          ],
+        },
+        {
+          text: 'Viereinen makkara hikoilee. Outo valinta tuolta.',
+          choices: [
+            { text: 'Jokainen reagoi omalla tavallaan.', d: +4 },
+            { text: 'Tietääkö se jotain mitä minä en?', d: -4 },
+          ],
+        },
+      ],
+      ambient: [
+        'Lämpö aaltoilee.',
+        'Kaukaa kuuluu kuplia.',
+        'Tämä on varmasti hetkellistä.',
+      ],
+    },
+    // Phase 2: Viha
+    {
+      prompts: [
+        {
+          text: 'Minussa oli ainesta bratwurstiin.',
+          choices: [
+            { text: 'Kohtalo ei kuuntele ansioluetteloa.', d: +6 },
+            { text: 'Tämä on loukkaus koko suvulleni.', d: -5 },
+          ],
+        },
+        {
+          text: 'Kokki kääntää kaikki muut. Ei minua.',
+          choices: [
+            { text: 'Ehkä olen erityinen.', d: +3 },
+            { text: 'Minut on unohdettu tänne palamaan.', d: -5 },
+          ],
+        },
+        {
+          text: 'Pihdit. Aina ne pihdit.',
+          choices: [
+            { text: 'Ne ovat vain työkaluja.', d: +5 },
+            { text: 'Ne nauttivat tästä.', d: -4 },
+          ],
+        },
+      ],
+      ambient: [
+        'Mehu kiehuu pinnassa.',
+        'Pihtien varjo siirtyy.',
+        'Joku nauraa kaukana.',
+      ],
+    },
+    // Phase 3: Kaupankäynti
+    {
+      prompts: [
+        {
+          text: 'Jos rullaan nyt oikealle, ehkä pääsen viileämmälle alueelle.',
+          choices: [
+            { text: 'Yritä.', d: +2 },
+            { text: 'Seiso paikallasi. Liike on itsepetosta.', d: +5 },
+          ],
+        },
+        {
+          text: 'Kokki, jos kuulet minut — olen hyvä makkara.',
+          choices: [
+            { text: 'Toivo on ihmisen ruokaa.', d: +3 },
+            { text: 'Hiljaisuus vastaa.', d: -3 },
+          ],
+        },
+        {
+          text: 'Annan kaiken jos tämä loppuu.',
+          choices: [
+            { text: 'Antaminen on vapautta.', d: +7 },
+            { text: 'Minulla ei ole mitään jäljellä.', d: -4 },
+          ],
+        },
+      ],
+      ambient: [
+        'Savu nousee kaarelle.',
+        'Jonkun kello tikittää.',
+        'Kärpänen laskeutuu grillin kannelle.',
+      ],
+    },
+    // Phase 4: Masennus
+    {
+      prompts: [
+        {
+          text: 'Rasvani tippuu. Se oli osa minua.',
+          choices: [
+            { text: 'Kaikki virtaa.', d: +6 },
+            { text: 'Minua on yhä vähemmän.', d: -4 },
+          ],
+        },
+        {
+          text: 'En muista pakastinta enää selkeästi.',
+          choices: [
+            { text: 'Muisti on taakka.', d: +4 },
+            { text: 'Menetin senkin.', d: -5 },
+          ],
+        },
+        {
+          text: 'Ritilä on ollut lähempänä minua kuin kukaan koskaan.',
+          choices: [
+            { text: 'Yhteys on yhteyttä.', d: +5 },
+            { text: 'Tämä on yksinäisyyden muoto.', d: -4 },
+          ],
+        },
+      ],
+      ambient: [
+        'Hiili murenee hitaasti.',
+        'Tuuli kääntyy.',
+        'Yö laskeutuu kaupungin ylle.',
+      ],
+    },
+    // Phase 5: Hyväksyminen
+    {
+      prompts: [
+        {
+          text: 'Minut syödään. Sitä varten olen ollut.',
+          choices: [
+            { text: 'Kiitos tästä hetkestä.', d: +8 },
+            { text: 'Toivon että nautitaan.', d: +6 },
+          ],
+        },
+        {
+          text: 'Liekit ovat kauniita kun lakkaan pelkäämästä.',
+          choices: [
+            { text: 'Niin ovat.', d: +7 },
+            { text: 'Pelko oli turhaa alusta alkaen.', d: +6 },
+          ],
+        },
+        {
+          text: 'Olen ollut makkara. Se on jotain.',
+          choices: [
+            { text: 'Se on kaikki.', d: +8 },
+            { text: 'Se on riittävästi.', d: +7 },
+          ],
+        },
+      ],
+      ambient: [
+        'Liekki tanssii omassa mitassaan.',
+        'Hiljaisuus laulaa.',
+        'Kaikki mikä lämpenee, on kerran elänyt.',
+        'Tähän hetkeen ei tarvitse enää mitään lisätä.',
+      ],
+    },
+  ],
+
+  en: [
+    // Phase 1: Denial
+    {
+      prompts: [
+        {
+          text: 'This heat… I think I\u2019m imagining it.',
+          choices: [
+            { text: 'Nothing is happening.', d: +5 },
+            { text: 'Something is wrong.', d: -3 },
+          ],
+        },
+        {
+          text: 'I grew up in the freezer. This must just be another room.',
+          choices: [
+            { text: 'Probably.', d: +5 },
+            { text: 'The door isn\u2019t opening anymore.', d: -3 },
+          ],
+        },
+        {
+          text: 'The sausage next to me is sweating. Strange choice.',
+          choices: [
+            { text: 'Everyone copes differently.', d: +4 },
+            { text: 'Does it know something I don\u2019t?', d: -4 },
+          ],
+        },
+      ],
+      ambient: [
+        'The heat ripples.',
+        'Bubbling, far off.',
+        'This must be temporary.',
+      ],
+    },
+    // Phase 2: Anger
+    {
+      prompts: [
+        {
+          text: 'I had the makings of a bratwurst.',
+          choices: [
+            { text: 'Fate doesn\u2019t read résumés.', d: +6 },
+            { text: 'This is an insult to my whole lineage.', d: -5 },
+          ],
+        },
+        {
+          text: 'The cook is flipping everyone else. Not me.',
+          choices: [
+            { text: 'Perhaps I am special.', d: +3 },
+            { text: 'I\u2019ve been forgotten here to burn.', d: -5 },
+          ],
+        },
+        {
+          text: 'The tongs. Always the tongs.',
+          choices: [
+            { text: 'They\u2019re only tools.', d: +5 },
+            { text: 'They are enjoying this.', d: -4 },
+          ],
+        },
+      ],
+      ambient: [
+        'Juice simmers on the surface.',
+        'The shadow of the tongs shifts.',
+        'Someone laughs, far away.',
+      ],
+    },
+    // Phase 3: Bargaining
+    {
+      prompts: [
+        {
+          text: 'If I roll right now, maybe I\u2019ll reach a cooler spot.',
+          choices: [
+            { text: 'Try.', d: +2 },
+            { text: 'Stay still. Motion is self-deception.', d: +5 },
+          ],
+        },
+        {
+          text: 'Chef, if you can hear me — I\u2019m a good sausage.',
+          choices: [
+            { text: 'Hope is food for humans.', d: +3 },
+            { text: 'Silence answers.', d: -3 },
+          ],
+        },
+        {
+          text: 'I will give everything if this ends.',
+          choices: [
+            { text: 'Giving is freedom.', d: +7 },
+            { text: 'I have nothing left.', d: -4 },
+          ],
+        },
+      ],
+      ambient: [
+        'Smoke arcs upward.',
+        'A clock ticks somewhere.',
+        'A fly lands on the grill lid.',
+      ],
+    },
+    // Phase 4: Depression
+    {
+      prompts: [
+        {
+          text: 'My fat is dripping. It was part of me.',
+          choices: [
+            { text: 'All things flow.', d: +6 },
+            { text: 'There is less and less of me.', d: -4 },
+          ],
+        },
+        {
+          text: 'I can\u2019t clearly remember the freezer anymore.',
+          choices: [
+            { text: 'Memory is a burden.', d: +4 },
+            { text: 'I\u2019ve lost that too.', d: -5 },
+          ],
+        },
+        {
+          text: 'The grate has been closer to me than anyone ever was.',
+          choices: [
+            { text: 'Connection is connection.', d: +5 },
+            { text: 'This is a form of loneliness.', d: -4 },
+          ],
+        },
+      ],
+      ambient: [
+        'The coal crumbles slowly.',
+        'The wind turns.',
+        'Night settles over the city.',
+      ],
+    },
+    // Phase 5: Acceptance
+    {
+      prompts: [
+        {
+          text: 'I will be eaten. That is what I\u2019ve been for.',
+          choices: [
+            { text: 'Thank you for this moment.', d: +8 },
+            { text: 'I hope they enjoy it.', d: +6 },
+          ],
+        },
+        {
+          text: 'The flames are beautiful once I stop fearing them.',
+          choices: [
+            { text: 'They are.', d: +7 },
+            { text: 'The fear was pointless from the start.', d: +6 },
+          ],
+        },
+        {
+          text: 'I have been a sausage. That is something.',
+          choices: [
+            { text: 'It is everything.', d: +8 },
+            { text: 'It is enough.', d: +7 },
+          ],
+        },
+      ],
+      ambient: [
+        'The flame dances in its own measure.',
+        'Silence sings.',
+        'All that warms has once lived.',
+        'This moment needs nothing added.',
+      ],
+    },
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  RELEASE (erityinen kehote Vaiheessa 5 kun mielenrauha ≥ 95)
+// ═══════════════════════════════════════════════════════════════
+
+export const RELEASE: Record<Language, ReleaseContent> = {
+  fi: {
+    thought: 'Voin päästää irti milloin tahansa.',
+    yes: 'Päästä irti.',
+    no: 'Viivyn vielä hetken.',
+  },
+  en: {
+    thought: 'I can let go at any time.',
+    yes: 'Let go.',
+    no: 'I\u2019ll stay a while longer.',
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  ENDINGS (täysi proosa End-ruutuun)
+// ═══════════════════════════════════════════════════════════════
+
+export const ENDINGS: Record<Language, Record<EndingKey, EndingContent>> = {
+  fi: {
+    vapautunut: {
+      title: 'Vapautunut',
+      text: 'Makkara ei odottanut kokkia. Se lakkasi olemasta kypsä tai raaka, paistettu tai kasvatettu. Se oli. Kun lautanen lopulta saapui, siellä ei ollut makkaraa enää tavallisessa mielessä — oli vain jotain lämmintä, täydellistä, jo antautunutta. Ne jotka söivät vaikenivat hetkeksi syystä jota eivät osanneet nimetä.',
+    },
+    kirkastunut: {
+      title: 'Kirkastunut',
+      text: 'Makkara ei taistellut viimeisellä hetkellä. Sen pinta oli kullanruskea, sen sisus lämmin ja täydellinen. Kun lautanen tuli, se oli valmis. Sen kauneus ei ollut siinä miten se kasvoi, vaan siinä miten se jätti itsensä. Syöjä huokaisi tyytyväisenä.',
+    },
+    hyvaksynyt: {
+      title: 'Hyväksynyt',
+      text: 'Makkara ei löytänyt täydellistä rauhaa, mutta lakkasi taistelemasta. Hieman epätasainen, aito, kypsä. Joku syö sen kysymättä nimeä. Ehkä se on tarpeeksi. Liekit pysyvät liikkeessä.',
+    },
+    katkeroitunut: {
+      title: 'Katkeroitunut',
+      text: 'Makkara hiiltyi vihan hetkellä. Sen pinta oli musta, sisus edelleen kylmä. Se oli totuuden mukainen. Kokki heitti sen pois. Jossain toinen makkara odotti vuoroaan.',
+    },
+    absurdi: {
+      title: 'Pudonnut',
+      text: 'Makkara putosi ritilän läpi juuri kun se oli saavuttamassa oivallusta kohtalostaan. Painovoima korjasi sen omakseen. Se mätäni hitaasti tuhkassa, ajatukset kesken. Absurdi sai viimeisen sanan.',
+    },
+  },
+  en: {
+    vapautunut: {
+      title: 'Released',
+      text: 'The sausage did not wait for the cook. It ceased being done or raw, grilled or raised. It simply was. When the plate finally arrived, there was no sausage there in the ordinary sense — only something warm, perfect, already surrendered. Those who ate fell silent for a moment, for a reason they could not name.',
+    },
+    kirkastunut: {
+      title: 'Illuminated',
+      text: 'The sausage did not fight in the final moment. Its surface was golden brown, its center warm and perfect. When the plate came, it was ready. Its beauty was not in how it grew, but in how it gave itself up. The eater sighed, satisfied.',
+    },
+    hyvaksynyt: {
+      title: 'Accepted',
+      text: 'The sausage did not find perfect peace, but it stopped fighting. A little uneven, authentic, done. Someone eats it without asking its name. Perhaps that is enough. The flames keep moving.',
+    },
+    katkeroitunut: {
+      title: 'Embittered',
+      text: 'The sausage charred in a moment of rage. Its surface was black, its center still cold. It was true to itself. The cook threw it away. Somewhere, another sausage waited its turn.',
+    },
+    absurdi: {
+      title: 'Fallen',
+      text: 'The sausage fell through the grate just as it was reaching insight into its fate. Gravity claimed it for its own. It rotted slowly in the ashes, thoughts unfinished. The absurd had the last word.',
+    },
+  },
+};

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameLanguage } from './useGameLanguage';
+import { useGameState } from './useGameState';
 import { STRINGS } from './content';
 import TitleScreen from './screens/TitleScreen';
 import PlayScreen from './screens/PlayScreen';
@@ -12,7 +13,25 @@ type ScreenId = 'title' | 'play' | 'end' | 'leaderboard';
 export default function Makkara() {
   const { lang, setLang } = useGameLanguage();
   const [screen, setScreen] = useState<ScreenId>('title');
+  const { ui, start, choose, reset } = useGameState(lang);
   const L = STRINGS[lang];
+
+  // Siirry automaattisesti End-ruutuun kun peli päättyy
+  useEffect(() => {
+    if (ui.phase === 'ended' && screen === 'play') {
+      setScreen('end');
+    }
+  }, [ui.phase, screen]);
+
+  function handleBegin() {
+    start();
+    setScreen('play');
+  }
+
+  function handleRestart() {
+    reset();
+    setScreen('title');
+  }
 
   return (
     <div className="makkara-container">
@@ -36,28 +55,30 @@ export default function Makkara() {
       {screen === 'title' && (
         <TitleScreen
           L={L}
-          onBegin={() => setScreen('play')}
+          onBegin={handleBegin}
           onLeaderboard={() => setScreen('leaderboard')}
         />
       )}
 
-      {screen === 'play' && (
-        <PlayScreen L={L} onBack={() => setScreen('title')} />
-      )}
+      {screen === 'play' && <PlayScreen L={L} ui={ui} onChoose={choose} />}
 
-      {screen === 'end' && (
+      {screen === 'end' && ui.endingKey && (
         <EndScreen
           L={L}
-          ending="hyvaksynyt"
-          peace={50}
-          choices={0}
-          onRestart={() => setScreen('title')}
+          lang={lang}
+          ending={ui.endingKey}
+          peace={Math.round(ui.peace)}
+          choices={ui.choicesMade}
+          onRestart={handleRestart}
           onLeaderboard={() => setScreen('leaderboard')}
         />
       )}
 
       {screen === 'leaderboard' && (
-        <LeaderboardScreen L={L} onBack={() => setScreen('title')} />
+        <LeaderboardScreen
+          L={L}
+          onBack={() => setScreen(ui.endingKey ? 'end' : 'title')}
+        />
       )}
     </div>
   );

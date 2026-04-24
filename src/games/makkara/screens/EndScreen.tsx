@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import type { LangStrings, EndingKey } from '../content';
+import type { LangStrings, EndingKey, Language } from '../content';
 import { ENDING_TIER } from '../content';
+import { ENDINGS } from '../gameData';
 import { submitScore } from '../../../shared/supabase';
 
 interface Props {
   L: LangStrings;
+  lang: Language;
   ending: EndingKey;
   peace: number;
   choices: number;
@@ -16,6 +18,7 @@ type Status = 'idle' | 'submitting' | 'done' | 'error';
 
 export default function EndScreen({
   L,
+  lang,
   ending,
   peace,
   choices,
@@ -25,12 +28,12 @@ export default function EndScreen({
   const [name, setName] = useState('');
   const [status, setStatus] = useState<Status>('idle');
 
+  const endingContent = ENDINGS[lang][ending];
+
   async function handleSubmit() {
     setStatus('submitting');
     try {
-      // Score encoding: tier * 1000 + peace.
-      // Esim. Kirkastunut (tier 4) + peace 87 -> 4087.
-      // Näin yksi SQL-sarake riittää ja ORDER BY score DESC toimii suoraan.
+      // Score encoding: tier * 1000 + peace → yksi numero, ORDER BY score DESC toimii
       const score = ENDING_TIER[ending] * 1000 + peace;
       const finalName = name.trim() || L.anonymous;
       await submitScore('makkara', finalName, score, {
@@ -47,7 +50,8 @@ export default function EndScreen({
   return (
     <div className="makkara-end">
       <div className="makkara-kicker">{L.endKicker}</div>
-      <h2 className="makkara-end-title">{L.endingShort[ending]}</h2>
+      <h2 className="makkara-end-title">{endingContent.title}</h2>
+      <p className="makkara-end-text">{endingContent.text}</p>
       <div className="makkara-end-stats">{L.formatStats(peace, choices)}</div>
 
       {status !== 'done' ? (
