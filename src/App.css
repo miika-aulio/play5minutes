@@ -1,0 +1,135 @@
+:root {
+  --bg: #0d0906;
+  --bg-warm: #1a0f08;
+  --cream: #f4ead9;
+  --cream-dim: #a39684;
+  --ember: #e8844a;
+  --ember-deep: #b85420;
+  --bronze: #8a6a4a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--cream);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(232,132,74,0.08) 0%, transparent 60%),
+    linear-gradient(to bottom, #0a0604 0%, #0d0906 100%);
+}
+
+a { color: inherit; }
+
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.app-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(138,106,74,0.2);
+}
+.app-logo {
+  color: var(--cream);
+  text-decoration: none;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  transition: color 0.3s;
+}
+.app-logo:hover { color: var(--ember); }
+
+.app-main { flex: 1; padding: 3rem 1.5rem; }
+
+.home { max-width: 640px; margin: 0 auto; }
+.home-title {
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.4rem;
+}
+.home-tag {
+  color: var(--cream-dim);
+  font-style: italic;
+  margin-bottom: 2.5rem;
+  font-size: 1.1rem;
+}
+
+.game-list { list-style: none; display: grid; gap: 1rem; }
+.game-card a {
+  display: block;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid rgba(138,106,74,0.3);
+  color: var(--cream);
+  text-decoration: none;
+  transition: all 0.3s;
+}
+.game-card a:hover {
+  border-color: var(--ember);
+  background: rgba(232,132,74,0.05);
+  transform: translateX(4px);
+}
+.game-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+}
+.game-card h2 {
+  font-size: 1.6rem;
+  font-weight: 500;
+}
+.game-card .duration {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+.game-card p {
+  color: var(--cream-dim);
+  font-style: italic;
+  font-size: 1rem;
+}
+
+.conn-status {
+  margin-top: 4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+  opacity: 0.6;
+}
+.conn-status.ok { color: var(--ember); opacity: 1; }
+.conn-status.fail { color: var(--ember-deep); opacity: 1; }
+
+.placeholder {
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 4rem 1rem;
+}
+.placeholder h2 {
+  font-size: 2.5rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+.placeholder p {
+  color: var(--cream-dim);
+  font-style: italic;
+  margin-bottom: 2rem;
+}
+.back-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.back-link:hover { color: var(--ember); }
