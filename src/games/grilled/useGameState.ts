@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EndingKey } from './content';
 import type { Choice } from './gameData';
-import { PROMPTS, RELEASE } from './gameData';
+import { PROMPTS, RELEASE, PASSIVITY } from './gameData';
 
 // ═══════════════════════════════════════════════════════════════
 //  VAKIOT
 // ═══════════════════════════════════════════════════════════════
 
-const TOTAL_SECONDS = 300;
+const TOTAL_SECONDS = 300; // 5 min
 const PHASE_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8] as const;
 
 const FIRST_PROMPT_DELAY = 800;
@@ -18,11 +18,17 @@ const END_FADE_DELAY = 1500;
 const RELEASE_FADE_DELAY = 1800;
 const ABSURDI_CHANCE = 0.03;
 
+// Passiivisuus-mekaniikka
+const IDLE_DECAY_AFTER_MS = 10000;        // 10s passiivisuuden jälkeen peace alkaa laskea
+const PASSIVITY_TRIGGER_AFTER_MS = 18000; // 18s jälkeen laukeaa passivity-monologi (kerran per vaihe)
+const PASSIVITY_DISPLAY_MS = 4000;        // passivity-monologi näkyy ~4s ennen etenemistä
+const IDLE_DECAY_RATE_PER_SEC = 1;        // peace-lasku / sek passiivisuudessa
+
 // ═══════════════════════════════════════════════════════════════
 //  TYYPIT
 // ═══════════════════════════════════════════════════════════════
 
-type GamePhase = 'idle' | 'prompt' | 'ambient' | 'release' | 'ended';
+type GamePhase = 'idle' | 'prompt' | 'ambient' | 'release' | 'passivity' | 'ended';
 
 type MachineState = {
   running: boolean;
@@ -37,13 +43,15 @@ type MachineState = {
   released: boolean;
   endingKey: EndingKey | null;
   pulseKey: number;
+  idleStartedAt: number | null;         // milloin nykyinen odotus alkoi
+  passivityFiredInPhase: boolean;       // onko passivity-monologi näytetty tässä vaiheessa
 };
 
 export type UIState = {
   doneness: number;
   peace: number;
   phaseIdx: number;
-  promptIdx: number;         // ← lisätty ääni-integraatiota varten
+  promptIdx: number;
   choicesMade: number;
   phase: GamePhase;
   thought: string | null;
@@ -71,6 +79,8 @@ function initialMachine(): MachineState {
     released: false,
     endingKey: null,
     pulseKey: 0,
+    idleStartedAt: null,
+    passivityFiredInPhase: false,
   };
 }
 
@@ -93,6 +103,7 @@ function initialUI(): UIState {
 function deriveThought(m: MachineState): string | null {
   if (m.phase === 'idle' || m.phase === 'ended') return null;
   if (m.phase === 'release') return RELEASE.thought;
+  if (m.phase === 'passivity') return PASSIVITY[m.phaseIdx] ?? null;
   if (m.phase === 'ambient') {
     const phase = PROMPTS[m.phaseIdx];
     return phase.ambient[m.ambientIdx % phase.ambient.length];
@@ -171,6 +182,27 @@ export function useGameState() {
     lastTickRef.current = now;
     m.doneness = Math.min(1, m.doneness + dt / TOTAL_SECONDS);
 
+    // Passiivisuus-mekaniikka: odottaako pelaaja valintaa liian kauan?
+    if (
+      m.phase === 'prompt' &&
+      m.waitingChoice &&
+      m.idleStartedAt !== null
+    ) {
+      const idleMs = now - m.idleStartedAt;
+
+      // Peace-lasku 10 sekunnin jälkeen
+      if (idleMs > IDLE_DECAY_AFTER_MS) {
+        m.peace = Math.max(0, m.peace - IDLE_DECAY_RATE_PER_SEC * dt);
+      }
+
+      // Passivity-monologi 18 sekunnin jälkeen (kerran per vaihe)
+      if (idleMs > PASSIVITY_TRIGGER_AFTER_MS && !m.passivityFiredInPhase) {
+        firePassivity();
+        return;
+      }
+    }
+
+    // Vaihekynnysten tarkistus
     let targetPhase = 0;
     for (let i = PHASE_THRESHOLDS.length - 1; i >= 0; i--) {
       if (m.doneness >= PHASE_THRESHOLDS[i]) {
@@ -182,6 +214,7 @@ export function useGameState() {
       m.phaseIdx = targetPhase;
       m.promptIdx = 0;
       m.ambientIdx = 0;
+      m.passivityFiredInPhase = false; // uusi vaihe → uusi passivity-kvoota
       if (!m.waitingChoice) {
         schedulePrompt(PHASE_ADVANCE_DELAY);
       }
@@ -208,10 +241,12 @@ export function useGameState() {
     const m = machineRef.current;
     if (!m.running) return;
 
+    // Vaihe 5 + mielenrauha ≥ 95 → tarjoa vapautuminen (kerran)
     if (m.phaseIdx === 4 && m.peace >= 95 && !m.released) {
       m.released = true;
       m.phase = 'release';
       m.waitingChoice = true;
+      m.idleStartedAt = null; // release-valinnalla ei ole passivity-mekaniikkaa
       syncUI();
       return;
     }
@@ -220,6 +255,7 @@ export function useGameState() {
     if (m.promptIdx >= phase.prompts.length) {
       m.phase = 'ambient';
       m.waitingChoice = false;
+      m.idleStartedAt = null;
       syncUI();
       m.ambientIdx++;
       schedulePrompt(AMBIENT_CYCLE_DELAY);
@@ -228,7 +264,27 @@ export function useGameState() {
 
     m.phase = 'prompt';
     m.waitingChoice = true;
+    m.idleStartedAt = performance.now();
     syncUI();
+  }
+
+  // Passivity-monologi laukeaa kun pelaaja on odottanut liian kauan.
+  // Näyttää tekstin ~4 sekuntia, sitten etenee seuraavaan prompttiin.
+  function firePassivity() {
+    const m = machineRef.current;
+    m.phase = 'passivity';
+    m.waitingChoice = false;
+    m.idleStartedAt = null;
+    m.passivityFiredInPhase = true;
+    // Passiivisuus etenee "virtuaalisena valintana": promptIdx kasvaa,
+    // mutta peace ei muutu (pelaaja ei ole tehnyt valintaa, vain menettänyt mahdollisuuden)
+    m.promptIdx++;
+    syncUI();
+
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      showNextPrompt();
+    }, PASSIVITY_DISPLAY_MS);
   }
 
   function start() {
@@ -245,6 +301,7 @@ export function useGameState() {
     if (!m.waitingChoice) return;
 
     m.waitingChoice = false;
+    m.idleStartedAt = null;
     m.peace = Math.max(0, Math.min(100, m.peace + choice.d));
     m.choicesMade++;
     m.promptIdx++;

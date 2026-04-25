@@ -1,23 +1,46 @@
 import { useEffect, useRef } from 'react';
 import type { UIState } from './useGameState';
+import { PROMPTS } from './gameData';
 
-// Soittaa yhden monologin MP3-tiedoston kun uusi prompt näytetään.
-// Tiedostot: public/audio/p{phaseIdx}-{promptIdx}.mp3 (esim. p0-0.mp3)
+// Soittaa monologin, ambient-rivin tai passivity-rivin ääniraidan.
 //
-// Logiikka:
-// - Ääni alkaa kun ui.phase === 'prompt' JA ui.waitingChoice === true
-//   (eli uusi monologi juuri näytettiin pelaajalle).
-// - Vanha ääni pysäytetään kun uusi alkaa tai kun siirrytään pois prompt-tilasta.
-// - Ambient, release ja end-tilat eivät toista ääntä.
-// - Mute-tila vaikuttaa välittömästi nykyiseen toistoon (volume = 0).
+// Tiedostot:
+//   public/audio/p{phaseIdx}-{promptIdx}.mp3   (monologit)
+//   public/audio/a{phaseIdx}-{ambientIdx}.mp3  (ambient)
+//   public/audio/x{phaseIdx}.mp3               (passivity; yksi per vaihe)
 
 const AUDIO_VOLUME = 0.95;
+
+function findAmbientIndex(phaseIdx: number, thought: string): number {
+  const phase = PROMPTS[phaseIdx];
+  if (!phase) return -1;
+  return phase.ambient.indexOf(thought);
+}
+
+function resolveAudioSrc(
+  phase: UIState['phase'],
+  phaseIdx: number,
+  promptIdx: number,
+  thought: string | null,
+): string | null {
+  if (phase === 'prompt') {
+    return `/audio/p${phaseIdx}-${promptIdx}.mp3`;
+  }
+  if (phase === 'passivity') {
+    return `/audio/x${phaseIdx}.mp3`;
+  }
+  if (phase === 'ambient' && thought) {
+    const idx = findAmbientIndex(phaseIdx, thought);
+    if (idx < 0) return null;
+    return `/audio/a${phaseIdx}-${idx}.mp3`;
+  }
+  return null;
+}
 
 export function usePromptAudio(ui: UIState, muted: boolean) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mutedRef = useRef(muted);
 
-  // Pidä mutedRef synkassa ja sovella volume-muutos nykyiseen toistoon
   useEffect(() => {
     mutedRef.current = muted;
     if (audioRef.current) {
@@ -25,18 +48,15 @@ export function usePromptAudio(ui: UIState, muted: boolean) {
     }
   }, [muted]);
 
-  // Uusi prompt näytetty → soita ääni
   useEffect(() => {
-    // Pysäytä edellinen
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
 
-    // Soita vain kun käyttäjä odottaa valintaa (eli monologi on juuri näytetty)
-    if (ui.phase !== 'prompt' || !ui.waitingChoice) return;
+    const src = resolveAudioSrc(ui.phase, ui.phaseIdx, ui.promptIdx, ui.thought);
+    if (!src) return;
 
-    const src = `/audio/p${ui.phaseIdx}-${ui.promptIdx}.mp3`;
     const audio = new Audio(src);
     audio.volume = mutedRef.current ? 0 : AUDIO_VOLUME;
     audio.play().catch(() => {
@@ -47,5 +67,5 @@ export function usePromptAudio(ui: UIState, muted: boolean) {
     return () => {
       audio.pause();
     };
-  }, [ui.phase, ui.waitingChoice, ui.phaseIdx, ui.promptIdx]);
+  }, [ui.phase, ui.phaseIdx, ui.promptIdx, ui.thought]);
 }

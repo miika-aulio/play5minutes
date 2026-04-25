@@ -1,17 +1,5 @@
 // ElevenLabs TTS-generaattori Grilled-pelille.
-//
-// Käyttö (Windows cmd):
-//   set ELEVENLABS_API_KEY=sk_your_key_here
-//   set ELEVENLABS_VOICE_ID=your_voice_id_here
-//   node scripts\generate-audio.js
-//
-// Käyttö (PowerShell):
-//   $env:ELEVENLABS_API_KEY="sk_your_key_here"
-//   $env:ELEVENLABS_VOICE_ID="your_voice_id_here"
-//   node scripts\generate-audio.js
-//
-// Skripti on idempotentti — jos tiedosto on jo olemassa, se ohitetaan.
-// Jos haluat regeneroida yhden tiedoston, poista se ensin public/audio/-kansiosta.
+// Generoi monologit, ambient-rivit ja passivity-monologit.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -20,8 +8,7 @@ const API_KEY = process.env.ELEVENLABS_API_KEY;
 const VOICE_ID = process.env.ELEVENLABS_VOICE_ID;
 const OUT_DIR = path.join('public', 'audio');
 
-// Monologit täsmälleen samassa järjestyksessä kuin gameData.ts:ssä.
-// Jos muutat gameData.ts:ää, muista päivittää tämä.
+// Monologit (promptit) — tiedostonimet: p{phase}-{idx}.mp3
 const PROMPTS = [
   // Phase 0: Denial
   [
@@ -55,16 +42,110 @@ const PROMPTS = [
   ],
 ];
 
-// Voice settings — säädä jos haluat eri sävyn.
-// stability: korkeampi = tasaisempi, matalampi = ilmaisuvoimaisempi (0.0–1.0)
-// similarity_boost: kuinka tiukasti pysyy alkuperäisessä äänessä (0.0–1.0)
-// style: tunnetilan voimakkuus (v2-mallissa; 0.0–1.0)
-const VOICE_SETTINGS = {
+// Ambient-rivit — tiedostonimet: a{phase}-{idx}.mp3
+const AMBIENT = [
+  [
+    'The heat ripples.',
+    'Bubbling, far off.',
+    'This must be temporary.',
+  ],
+  [
+    'Juice simmers on the surface.',
+    'The shadow of the tongs shifts.',
+    'Someone laughs, far away.',
+  ],
+  [
+    'Smoke arcs upward.',
+    'A clock ticks somewhere.',
+    'A fly lands on the grill lid.',
+  ],
+  [
+    'The coal crumbles slowly.',
+    'The wind turns.',
+    'Night settles over the city.',
+  ],
+  [
+    'The flame dances in its own measure.',
+    'Silence sings.',
+    'All that warms has once lived.',
+    'This moment needs nothing added.',
+  ],
+];
+
+// Passivity — yksi per vaihe, tiedostonimet: x{phase}.mp3
+const PASSIVITY = [
+  'I haven\u2019t answered myself. That is also an answer.',
+  'Silence is not calm. It is just silence.',
+  'I stopped making offers. Perhaps that was the only offer left.',
+  'I have been letting the moment choose for me.',
+  'To not decide is also to decide. I see that now.',
+];
+
+// Monologit: enemmän tunnetta
+const PROMPT_SETTINGS = {
   stability: 0.55,
   similarity_boost: 0.75,
   style: 0.35,
   use_speaker_boost: true,
 };
+
+// Ambient: rauhallisempi
+const AMBIENT_SETTINGS = {
+  stability: 0.7,
+  similarity_boost: 0.75,
+  style: 0.2,
+  use_speaker_boost: true,
+};
+
+// Passivity: pohdiskeleva, havaitseva. Vakaampi kuin monologi mutta ei yhtä hillitty
+// kuin ambient — pelaaja saa huomautuksen, jossa on sävy mutta ei syytöstä.
+const PASSIVITY_SETTINGS = {
+  stability: 0.65,
+  similarity_boost: 0.75,
+  style: 0.3,
+  use_speaker_boost: true,
+};
+
+async function generateOne(filename, text, settings) {
+  const outPath = path.join(OUT_DIR, filename);
+
+  try {
+    await fs.access(outPath);
+    console.log(`  [ohita]   ${filename}  (jo olemassa)`);
+    return 'skipped';
+  } catch {
+    // doesn't exist, proceed
+  }
+
+  const preview = text.slice(0, 50) + (text.length > 50 ? '…' : '');
+  console.log(`  [luo]     ${filename}  "${preview}"`);
+
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
+    {
+      method: 'POST',
+      headers: {
+        'xi-api-key': API_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: settings,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`ElevenLabs API palautti ${res.status}: ${errText}`);
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  await fs.writeFile(outPath, Buffer.from(arrayBuffer));
+  return 'generated';
+}
 
 async function main() {
   if (!API_KEY) {
@@ -81,66 +162,56 @@ async function main() {
   let generated = 0;
   let skipped = 0;
 
-  for (let phase = 0; phase < PROMPTS.length; phase++) {
-    for (let idx = 0; idx < PROMPTS[phase].length; idx++) {
-      const text = PROMPTS[phase][idx];
-      const filename = `p${phase}-${idx}.mp3`;
-      const outPath = path.join(OUT_DIR, filename);
-
-      // Skip if already exists
-      try {
-        await fs.access(outPath);
-        console.log(`  [ohita]   ${filename}  (jo olemassa)`);
-        skipped++;
-        continue;
-      } catch {
-        // doesn't exist, proceed
-      }
-
-      console.log(`  [luo]     ${filename}  "${text.slice(0, 50)}${text.length > 50 ? '…' : ''}"`);
-
-      const res = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-        {
-          method: 'POST',
-          headers: {
-            'xi-api-key': API_KEY,
-            'Content-Type': 'application/json',
-            Accept: 'audio/mpeg',
-          },
-          body: JSON.stringify({
-            text,
-            model_id: 'eleven_multilingual_v2',
-            voice_settings: VOICE_SETTINGS,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`\nERROR: ElevenLabs API palautti ${res.status}:`);
-        console.error(errText);
-        console.error(
-          `\nGeneroitiin ${generated} tiedostoa ennen virhettä. Voit ajaa skriptin uudestaan jatkaaksesi.`,
+  try {
+    console.log('Monologit:');
+    for (let phase = 0; phase < PROMPTS.length; phase++) {
+      for (let idx = 0; idx < PROMPTS[phase].length; idx++) {
+        const result = await generateOne(
+          `p${phase}-${idx}.mp3`,
+          PROMPTS[phase][idx],
+          PROMPT_SETTINGS,
         );
-        process.exit(1);
+        if (result === 'generated') generated++;
+        else skipped++;
       }
-
-      const arrayBuffer = await res.arrayBuffer();
-      await fs.writeFile(outPath, Buffer.from(arrayBuffer));
-      generated++;
     }
+
+    console.log('');
+    console.log('Ambient-rivit:');
+    for (let phase = 0; phase < AMBIENT.length; phase++) {
+      for (let idx = 0; idx < AMBIENT[phase].length; idx++) {
+        const result = await generateOne(
+          `a${phase}-${idx}.mp3`,
+          AMBIENT[phase][idx],
+          AMBIENT_SETTINGS,
+        );
+        if (result === 'generated') generated++;
+        else skipped++;
+      }
+    }
+
+    console.log('');
+    console.log('Passivity-monologit:');
+    for (let phase = 0; phase < PASSIVITY.length; phase++) {
+      const result = await generateOne(
+        `x${phase}.mp3`,
+        PASSIVITY[phase],
+        PASSIVITY_SETTINGS,
+      );
+      if (result === 'generated') generated++;
+      else skipped++;
+    }
+  } catch (err) {
+    console.error('\nERROR:', err.message);
+    console.error(
+      `\nGeneroitiin ${generated} tiedostoa ennen virhettä. Voit ajaa skriptin uudestaan jatkaaksesi.`,
+    );
+    process.exit(1);
   }
 
   console.log('');
   console.log(`Valmis. Generoitiin ${generated} uutta tiedostoa, ohitettiin ${skipped}.`);
   console.log(`Tiedostot kansiossa: ${OUT_DIR}/`);
-  console.log('');
-  console.log('Seuraavaksi:');
-  console.log('  1. npm run dev — testaa paikallisesti että äänet toistuvat');
-  console.log('  2. git add public/audio/');
-  console.log('  3. git commit -m "Add monologue audio"');
-  console.log('  4. git push');
 }
 
 main().catch((err) => {

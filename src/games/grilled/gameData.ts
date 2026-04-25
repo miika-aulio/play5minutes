@@ -233,3 +233,22 @@ export const ENDINGS: Record<EndingKey, EndingContent> = {
     text: 'The sausage fell through the grate just as it was reaching insight into its fate. Gravity claimed it for its own. It rotted slowly in the ashes, thoughts unfinished. The absurd had the last word.',
   },
 };
+
+// ═══════════════════════════════════════════════════════════════
+//  PASSIVITY (pelaaja on jättänyt valinnan tekemättä liian pitkään)
+// ═══════════════════════════════════════════════════════════════
+// Yksi monologi per vaihe. Sävy: havainto, ei syytös.
+// Näytetään kerran per vaihe jos pelaaja on odottanut > 18s.
+
+export const PASSIVITY: string[] = [
+  // Phase 0: Denial
+  'I haven\u2019t answered myself. That is also an answer.',
+  // Phase 1: Anger
+  'Silence is not calm. It is just silence.',
+  // Phase 2: Bargaining
+  'I stopped making offers. Perhaps that was the only offer left.',
+  // Phase 3: Depression
+  'I have been letting the moment choose for me.',
+  // Phase 4: Acceptance
+  'To not decide is also to decide. I see that now.',
+];
