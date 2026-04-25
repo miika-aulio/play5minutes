@@ -10,6 +10,7 @@ import { PROMPTS } from './gameData';
 //   public/audio/x{phaseIdx}.mp3               (passivity; yksi per vaihe)
 
 const AUDIO_VOLUME = 0.95;
+const PLAYBACK_START_DELAY_MS = 250; // pieni viive jotta edellinen ehtii pysähtyä
 
 function findAmbientIndex(phaseIdx: number, thought: string): number {
   const phase = PROMPTS[phaseIdx];
@@ -41,6 +42,7 @@ export function usePromptAudio(ui: UIState, muted: boolean) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mutedRef = useRef(muted);
 
+  // Pidä mutedRef synkassa ja sovella nykyiseen toistoon
   useEffect(() => {
     mutedRef.current = muted;
     if (audioRef.current) {
@@ -49,23 +51,34 @@ export function usePromptAudio(ui: UIState, muted: boolean) {
   }, [muted]);
 
   useEffect(() => {
+    // Pysäytä edellinen heti
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current.src = ''; // vapauta lataus jos kesken
       audioRef.current = null;
     }
 
     const src = resolveAudioSrc(ui.phase, ui.phaseIdx, ui.promptIdx, ui.thought);
     if (!src) return;
 
-    const audio = new Audio(src);
-    audio.volume = mutedRef.current ? 0 : AUDIO_VOLUME;
-    audio.play().catch(() => {
-      // Tiedosto puuttuu tai autoplay estetty — hiljainen ohitus
-    });
-    audioRef.current = audio;
+    // Pieni viive antaa edellisen Audio-objektin pysähtyä rauhassa
+    // ennen kuin uusi alkaa toistua. Estää lyhyen päällekkäisyyden.
+    const startTimer = setTimeout(() => {
+      const audio = new Audio(src);
+      audio.volume = mutedRef.current ? 0 : AUDIO_VOLUME;
+      audio.play().catch(() => {
+        // Tiedosto puuttuu tai autoplay estetty — hiljainen ohitus
+      });
+      audioRef.current = audio;
+    }, PLAYBACK_START_DELAY_MS);
 
     return () => {
-      audio.pause();
+      clearTimeout(startTimer);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current = null;
+      }
     };
   }, [ui.phase, ui.phaseIdx, ui.promptIdx, ui.thought]);
 }
