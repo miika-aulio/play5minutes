@@ -1,46 +1,73 @@
-# Ambient-laajennus + sekoitus + hidastus
+# Anger, Bargaining ja Depression -ambientit kirjoitettu uudestaan
 
-Korjaa kokemuksen jossa samat 3–4 ambient-riviä toistuvat muutamaan kertaan
-yhden vaiheen sisällä.
+Aiemmat ambient-rivit olivat liian neutraaleja eivätkä kuljettaneet vaiheen
+tunnetilaa. Tämä patch korvaa kolmen keskimmäisen vaiheen rivit täysin
+uusilla teksteillä jotka tukevat vaiheen sävyä:
 
-## Muutokset
+## Uudet rivit
 
-### 1. Lisää sisältöä
-16 → 36 ambient-riviä yhteensä:
-- Denial: 3 → 7
-- Anger: 3 → 7
-- Bargaining: 3 → 7
-- Depression: 3 → 7
-- Acceptance: 4 → 8
+### Phase II — Anger (7) — syyttävä, mustasukkainen
+- The cook flips another. Picks favourites.
+- Look at the bratwurst. Just sitting there. Whole.
+- The marinade was a lie.
+- Two of us came in. One will leave.
+- Salt. Always salt. Never enough sugar.
+- I'd be perfect on a plate. I would have been.
+- Somewhere, a freezer is opening for someone else.
 
-Sävy progressoi: **konkreettiset havainnot alkuvaiheissa → poeettiset välivaiheissa → filosofiset Acceptanceessa**.
+### Phase III — Bargaining (7) — etsii merkkejä, ehtoja, lupauksia
+- If the fly stays, that has to mean something.
+- Three more turns. Maybe four. Then it ends.
+- The wind shifted. That counts.
+- I am thinking small thoughts. Surely that is rewarded.
+- Every prayer needs an audience. Anyone listening?
+- Let me be uneven. Let them notice.
+- I will be quiet now. Quiet sausages get spared.
 
-### 2. Sekoitus joka pelikerralla
-Fisher-Yates-sekoitus järjestää ambient-rivien indeksit
-satunnaisesti kun vaihe alkaa. Eri pelikerroilla ne tulevat eri järjestyksessä.
+### Phase IV — Depression (7) — tasainen, harmaa, painokas
+- Nothing is happening. Nothing was going to.
+- I have stopped thinking about the freezer.
+- The flies have moved on.
+- Tomorrow will be like this.
+- Even the smoke leaves first.
+- I cannot remember caring.
+- There is no one to tell.
 
-### 3. Hidastettu tempo
-Ambient-kierto: 5.5 s → **9 s**. Antaa enemmän tilaa hetkeä — ja koska rivejä on
-yli kaksinkertainen määrä, toistoa tapahtuu paljon harvemmin.
+Denial ja Acceptance säilyvät ennallaan.
 
 ## Tiedostot
 
-```
-src/games/grilled/gameData.ts        (laajennettu ambient-listat)
-src/games/grilled/useGameState.ts    (sekoitus + hidastus)
-scripts/generate-audio.js            (uudet ambient-rivit)
-```
-
-`usePromptAudio.ts` ja `EndScreen.tsx` säilyvät edellisestä patchista —
-tässä paketissa niitä ei tarvitse korvata.
+- `src/games/grilled/gameData.ts`
+- `scripts/generate-audio.js`
 
 ## Asennus
 
 ### 1. Pura zippi
 
-Korvaa 3 tiedostoa.
+Korvaa 2 tiedostoa.
 
-### 2. Generoi uudet ambient-äänet
+### 2. Poista vanhat ambient-tiedostot näille kolmelle vaiheelle
+
+**Tärkeää:** koska skripti on idempotentti, se ohittaa olemassa olevat tiedostot.
+Vanhat MP3:t pitää poistaa että uudet luodaan tilalle.
+
+Windows cmd:
+```
+del public\audio\a1-*.mp3
+del public\audio\a2-*.mp3
+del public\audio\a3-*.mp3
+```
+
+PowerShell:
+```
+Remove-Item public\audio\a1-*.mp3
+Remove-Item public\audio\a2-*.mp3
+Remove-Item public\audio\a3-*.mp3
+```
+
+Yhteensä 21 tiedostoa poistuu (7 per vaihe × 3 vaihetta).
+
+### 3. Generoi uudet ambient-äänet
 
 ```
 set ELEVENLABS_API_KEY=oma_avain
@@ -48,66 +75,36 @@ set ELEVENLABS_VOICE_ID=jtE6dbPUTt2kchN89Uej
 node scripts\generate-audio.js
 ```
 
-Skripti ohittaa olemassa olevat 36 tiedostoa (15 monologia + 16 ambient + 5 passivity)
-ja generoi 20 uutta ambient-tiedostoa:
-- a0-3.mp3 … a0-6.mp3 (Denial 4 uutta)
-- a1-3.mp3 … a1-6.mp3 (Anger 4 uutta)
-- a2-3.mp3 … a2-6.mp3 (Bargaining 4 uutta)
-- a3-3.mp3 … a3-6.mp3 (Depression 4 uutta)
-- a4-4.mp3 … a4-7.mp3 (Acceptance 4 uutta)
+Skripti generoi 21 uutta tiedostoa (a1-0…a1-6, a2-0…a2-6, a3-0…a3-6) ja
+ohittaa kaikki muut. ~30 sek.
 
-Yhteensä ~30 sek.
-
-### 3. Testaa paikallisesti
+### 4. Testaa paikallisesti
 
 ```
 npm run dev
 ```
 
-Pelaa muutama vaihe läpi, kuuntele ambient-kierto. Eri pelikerroilla
-saman vaiheen rivit tulevat eri järjestyksessä, ja koska rivejä on enemmän
-ja tempo on hidastunut, toistoa tuntuu vähemmän.
+Pelaa Anger-vaihe läpi (klikkaa kaikki monologit), kuuntele uutta ambienttia.
+Saman Bargaining ja Depression. Sävyn pitäisi nyt selkeästi erottua eri vaiheissa.
 
-### 4. Deployaa
+### 5. Deployaa
 
 ```
 git add .
-git commit -m "Expand ambient pool, shuffle order, slower tempo"
+git commit -m "Rewrite Anger, Bargaining, Depression ambients with phase-appropriate tones"
 npm run build
 npx wrangler deploy
 ```
 
-## Säätöjä
+## Sisällön kaari
 
-`useGameState.ts`:n vakiossa `AMBIENT_CYCLE_DELAY` säätää tempoa millisekunteina.
-- 9000 (nykyinen): 9 s per rivi
-- 12000: 12 s, hyvin meditatiivinen
-- 7000: 7 s, mutta rivejä on nyt niin paljon että 9 s on hyvä lähtökohta
+Jos joskus haluat verrata tai palauttaa vanhat, ne ovat git-historian kautta:
 
-## Sisältö joka vaiheelle
+```
+git log -- src/games/grilled/gameData.ts
+git show <hash>:src/games/grilled/gameData.ts
+```
 
-**Denial** (7) — arkinen, makkara yrittää selittää tilanteen pois:
-- "The heat ripples." / "Bubbling, far off." / "This must be temporary."
-- "A breeze. Or maybe nothing." / "Someone is humming a tune I almost know."
-- "The clock face is too far to read." / "An empty plate waits, patient."
-
-**Anger** (7) — tarkkoja havaintoja, makkara katsoo katkeroituneena:
-- "Juice simmers on the surface." / "The shadow of the tongs shifts." / "Someone laughs, far away."
-- "Salt collects in a cooling pool." / "A mosquito tries the air. Decides against it."
-- "Wind moves grease across the iron." / "The radio plays a song I don't recognise."
-
-**Bargaining** (7) — aikaa katsotaan ulkopuolelta, pieni reflektio alkaa:
-- "Smoke arcs upward." / "A clock ticks somewhere." / "A fly lands on the grill lid."
-- "Smoke draws letters I cannot read." / "Footsteps. They go elsewhere."
-- "The day has been longer than yesterday." / "Even the flies have plans."
-
-**Depression** (7) — konkreettinen mutta hiljaisempi, runollisempi:
-- "The coal crumbles slowly." / "The wind turns." / "Night settles over the city."
-- "Light leaves the way it came." / "Iron remembers nothing."
-- "The next plate is already waiting." / "Steam rises like a small forgetting."
-
-**Acceptance** (8) — filosofinen, kontemplatiivinen:
-- "The flame dances in its own measure." / "Silence sings."
-- "All that warms has once lived." / "This moment needs nothing added."
-- "To be eaten is to be carried elsewhere." / "I am the heat now. Or the heat is me."
-- "Each fire is different. None is mine alone." / "The world keeps cooking, with or without."
+Mutta uusilla teksteillä peli kuljettaa vaiheen tunnetilaa selvästi paremmin —
+ambient ei ole enää vain "väliaikatekstit", vaan jatke jokaisen vaiheen sisäiselle
+maailmalle.
