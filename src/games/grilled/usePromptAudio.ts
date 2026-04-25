@@ -1,13 +1,16 @@
 import { useEffect, useRef } from 'react';
 import type { UIState } from './useGameState';
-import { PROMPTS } from './gameData';
+import { PROMPTS, LAST_WORDS_HIGH, LAST_WORDS_MID, LAST_WORDS_LOW } from './gameData';
 
-// Soittaa monologin, ambient-rivin tai passivity-rivin ääniraidan.
+// Soittaa monologin, ambient-rivin, passivity-rivin tai last-words-rivin ääniraidan.
 //
 // Tiedostot:
 //   public/audio/p{phaseIdx}-{promptIdx}.mp3   (monologit)
 //   public/audio/a{phaseIdx}-{ambientIdx}.mp3  (ambient)
 //   public/audio/x{phaseIdx}.mp3               (passivity; yksi per vaihe)
+//   public/audio/last-high.mp3                 (last words, peace ≥ 70)
+//   public/audio/last-mid.mp3                  (last words, peace 40–69)
+//   public/audio/last-low.mp3                  (last words, peace < 40)
 
 const AUDIO_VOLUME = 0.95;
 const PLAYBACK_START_DELAY_MS = 250; // pieni viive jotta edellinen ehtii pysähtyä
@@ -29,6 +32,12 @@ function resolveAudioSrc(
   }
   if (phase === 'passivity') {
     return `/audio/x${phaseIdx}.mp3`;
+  }
+  if (phase === 'last-words' && thought) {
+    if (thought === LAST_WORDS_HIGH) return '/audio/last-high.mp3';
+    if (thought === LAST_WORDS_MID) return '/audio/last-mid.mp3';
+    if (thought === LAST_WORDS_LOW) return '/audio/last-low.mp3';
+    return null;
   }
   if (phase === 'ambient' && thought) {
     const idx = findAmbientIndex(phaseIdx, thought);

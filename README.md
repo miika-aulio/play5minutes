@@ -1,73 +1,42 @@
-# Anger, Bargaining ja Depression -ambientit kirjoitettu uudestaan
+# Pelin viimeiset sanat
 
-Aiemmat ambient-rivit olivat liian neutraaleja eivätkä kuljettaneet vaiheen
-tunnetilaa. Tämä patch korvaa kolmen keskimmäisen vaiheen rivit täysin
-uusilla teksteillä jotka tukevat vaiheen sävyä:
+Korjaa pelin antikliimaksi: aiemmin viimeinen ambient-lause leikkautui
+kesken kun kypsyysmittari osui 100%:iin. Nyt peli kunnioittaa loppuhetkeä.
 
-## Uudet rivit
+## Mekaniikka
 
-### Phase II — Anger (7) — syyttävä, mustasukkainen
-- The cook flips another. Picks favourites.
-- Look at the bratwurst. Just sitting there. Whole.
-- The marinade was a lie.
-- Two of us came in. One will leave.
-- Salt. Always salt. Never enough sugar.
-- I'd be perfect on a plate. I would have been.
-- Somewhere, a freezer is opening for someone else.
+1. **Kun kypsyys saavuttaa 95%**, last-words-tila aikataulutetaan
+2. **Kypsyys jäätyy 95%:iin** — peli ei pääty ennen kuin viimeinen rivi on luettu
+3. Nykyinen monologi/ambient/passivity saa loppua rauhassa
+4. **Last-words-rivi näytetään** 6 sekuntia, ääni luetaan
+5. Vasta sen jälkeen siirrytään End-ruutuun
 
-### Phase III — Bargaining (7) — etsii merkkejä, ehtoja, lupauksia
-- If the fly stays, that has to mean something.
-- Three more turns. Maybe four. Then it ends.
-- The wind shifted. That counts.
-- I am thinking small thoughts. Surely that is rewarded.
-- Every prayer needs an audience. Anyone listening?
-- Let me be uneven. Let them notice.
-- I will be quiet now. Quiet sausages get spared.
+## Kolme variaatiota peace-arvon mukaan
 
-### Phase IV — Depression (7) — tasainen, harmaa, painokas
-- Nothing is happening. Nothing was going to.
-- I have stopped thinking about the freezer.
-- The flies have moved on.
-- Tomorrow will be like this.
-- Even the smoke leaves first.
-- I cannot remember caring.
-- There is no one to tell.
+| Peace | Teksti |
+|---|---|
+| ≥ 70 (kirkastunut/vapautunut polku) | "And so. The fire and I, together, end well." |
+| 40–69 (hyväksynyt polku) | "And so. The fire ends. And I." |
+| < 40 (katkeroitunut tai pudonnut) | "And so. It ends as it was." |
 
-Denial ja Acceptance säilyvät ennallaan.
+Yhteinen "And so." -alku tekee kaikista versioista tunnistettavasti samasta
+hetkestä, mutta loppu kuljettaa pelaajan sopivaan tunnelmaan riippuen siitä
+miten makkara on käynyt matkansa läpi.
 
 ## Tiedostot
 
-- `src/games/grilled/gameData.ts`
-- `scripts/generate-audio.js`
+- `src/games/grilled/gameData.ts`        (lisätty LAST_WORDS-vakiot ja pickLastWords)
+- `src/games/grilled/useGameState.ts`    (uusi 'last-words'-tila ja kypsyyden jäädytys)
+- `src/games/grilled/usePromptAudio.ts`  (last-words-äänitiedostojen reititys)
+- `scripts/generate-audio.js`            (LAST_WORDS-äänten generointi)
 
 ## Asennus
 
 ### 1. Pura zippi
 
-Korvaa 2 tiedostoa.
+Korvaa 4 tiedostoa.
 
-### 2. Poista vanhat ambient-tiedostot näille kolmelle vaiheelle
-
-**Tärkeää:** koska skripti on idempotentti, se ohittaa olemassa olevat tiedostot.
-Vanhat MP3:t pitää poistaa että uudet luodaan tilalle.
-
-Windows cmd:
-```
-del public\audio\a1-*.mp3
-del public\audio\a2-*.mp3
-del public\audio\a3-*.mp3
-```
-
-PowerShell:
-```
-Remove-Item public\audio\a1-*.mp3
-Remove-Item public\audio\a2-*.mp3
-Remove-Item public\audio\a3-*.mp3
-```
-
-Yhteensä 21 tiedostoa poistuu (7 per vaihe × 3 vaihetta).
-
-### 3. Generoi uudet ambient-äänet
+### 2. Generoi 3 uutta last-words-ääntä
 
 ```
 set ELEVENLABS_API_KEY=oma_avain
@@ -75,36 +44,45 @@ set ELEVENLABS_VOICE_ID=jtE6dbPUTt2kchN89Uej
 node scripts\generate-audio.js
 ```
 
-Skripti generoi 21 uutta tiedostoa (a1-0…a1-6, a2-0…a2-6, a3-0…a3-6) ja
-ohittaa kaikki muut. ~30 sek.
+Skripti ohittaa kaikki olemassa olevat (monologit, ambient, passivity) ja
+luo 3 uutta tiedostoa:
+- last-high.mp3
+- last-mid.mp3
+- last-low.mp3
 
-### 4. Testaa paikallisesti
+~10 sek.
+
+### 3. Testaa paikallisesti
 
 ```
 npm run dev
 ```
 
-Pelaa Anger-vaihe läpi (klikkaa kaikki monologit), kuuntele uutta ambienttia.
-Saman Bargaining ja Depression. Sävyn pitäisi nyt selkeästi erottua eri vaiheissa.
+Pelaa peli loppuun asti. Tarkkaile:
+- Kypsyysmittari pysähtyy 95%:iin viimeisten sekuntien ajaksi
+- Nykyinen ambient/monologi saa rauhassa loppua
+- Sen jälkeen ilmestyy "And so. ..." -teksti, joka luetaan ääneen
+- 6 sekunnin näytön jälkeen End-ruutu
 
-### 5. Deployaa
+Jotta saat eri version, vaihtele peace-arvoa eri pelikerroilla:
+- Ei valintoja → matala peace → "It ends as it was."
+- Tasaisia valintoja → keskimääräinen → "The fire ends. And I."
+- Aktiivisia rauhaa nostavia → korkea → "Together, end well."
+
+### 4. Deployaa
 
 ```
 git add .
-git commit -m "Rewrite Anger, Bargaining, Depression ambients with phase-appropriate tones"
+git commit -m "Add last words at end of game with three peace-based variants"
 npm run build
 npx wrangler deploy
 ```
 
-## Sisällön kaari
+## Säätöjä
 
-Jos joskus haluat verrata tai palauttaa vanhat, ne ovat git-historian kautta:
+`useGameState.ts`:n vakiot:
+- `LAST_WORDS_TRIGGER_DONENESS = 0.95` — millä kypsyydellä last-words käynnistyy
+- `LAST_WORDS_DISPLAY_MS = 6000` — kuinka kauan rivi näkyy
 
-```
-git log -- src/games/grilled/gameData.ts
-git show <hash>:src/games/grilled/gameData.ts
-```
-
-Mutta uusilla teksteillä peli kuljettaa vaiheen tunnetilaa selvästi paremmin —
-ambient ei ole enää vain "väliaikatekstit", vaan jatke jokaisen vaiheen sisäiselle
-maailmalle.
+Jos last-words-rivi tuntuu jäävän liian lyhyeksi (ääni ei ehdi loppua),
+nosta `LAST_WORDS_DISPLAY_MS` esim. 8000:een.

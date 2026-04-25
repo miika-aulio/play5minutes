@@ -106,6 +106,14 @@ const PASSIVITY = [
   'To not decide is also to decide. I see that now.',
 ];
 
+// Last words — kolme variaatiota peace-arvon mukaan.
+// Tiedostonimet: last-high.mp3, last-mid.mp3, last-low.mp3
+const LAST_WORDS = [
+  ['last-high', 'And so. The fire and I, together, end well.'],
+  ['last-mid',  'And so. The fire ends. And I.'],
+  ['last-low',  'And so. It ends as it was.'],
+];
+
 // Monologit: enemmän tunnetta
 const PROMPT_SETTINGS = {
   stability: 0.55,
@@ -128,6 +136,15 @@ const PASSIVITY_SETTINGS = {
   stability: 0.65,
   similarity_boost: 0.75,
   style: 0.3,
+  use_speaker_boost: true,
+};
+
+// Last words: rauhallinen, pohdittu, lopullinen. Hieman tunteellisempi
+// kuin passivity mutta vakaa — ei dramaattinen.
+const LAST_WORDS_SETTINGS = {
+  stability: 0.6,
+  similarity_boost: 0.75,
+  style: 0.4,
   use_speaker_boost: true,
 };
 
@@ -222,6 +239,18 @@ async function main() {
         `x${phase}.mp3`,
         PASSIVITY[phase],
         PASSIVITY_SETTINGS,
+      );
+      if (result === 'generated') generated++;
+      else skipped++;
+    }
+
+    console.log('');
+    console.log('Last words:');
+    for (const [name, text] of LAST_WORDS) {
+      const result = await generateOne(
+        `${name}.mp3`,
+        text,
+        LAST_WORDS_SETTINGS,
       );
       if (result === 'generated') generated++;
       else skipped++;

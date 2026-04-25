@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EndingKey } from './content';
 import type { Choice } from './gameData';
-import { PROMPTS, RELEASE, PASSIVITY } from './gameData';
+import { PROMPTS, RELEASE, PASSIVITY, pickLastWords } from './gameData';
 
 // ═══════════════════════════════════════════════════════════════
 //  VAKIOT
@@ -14,9 +14,14 @@ const FIRST_PROMPT_DELAY = 800;
 const NEXT_PROMPT_DELAY = 2200;
 const PHASE_ADVANCE_DELAY = 1500;
 const AMBIENT_CYCLE_DELAY = 9000;
-const END_FADE_DELAY = 1500;
 const RELEASE_FADE_DELAY = 1800;
 const ABSURDI_CHANCE = 0.03;
+
+// Last words: kun kypsyys saavuttaa 95%, peli odottaa nykyisen
+// ambient/monologin loppua, sitten näyttää viimeisen rivin
+// ennen End-ruutua.
+const LAST_WORDS_TRIGGER_DONENESS = 0.95;
+const LAST_WORDS_DISPLAY_MS = 6000;
 
 // Passiivisuus-mekaniikka
 const IDLE_DECAY_AFTER_MS = 10000;        // 10s passiivisuuden jälkeen peace alkaa laskea
@@ -28,7 +33,7 @@ const IDLE_DECAY_RATE_PER_SEC = 1;        // peace-lasku / sek passiivisuudessa
 //  TYYPIT
 // ═══════════════════════════════════════════════════════════════
 
-type GamePhase = 'idle' | 'prompt' | 'ambient' | 'release' | 'passivity' | 'ended';
+type GamePhase = 'idle' | 'prompt' | 'ambient' | 'release' | 'passivity' | 'last-words' | 'ended';
 
 type MachineState = {
   running: boolean;
@@ -38,7 +43,7 @@ type MachineState = {
   phaseIdx: number;
   promptIdx: number;
   ambientIdx: number;
-  ambientOrder: number[];               // sekoitettu järjestys ambient-rivien indekseistä
+  ambientOrder: number[];
   choicesMade: number;
   waitingChoice: boolean;
   released: boolean;
@@ -46,6 +51,8 @@ type MachineState = {
   pulseKey: number;
   idleStartedAt: number | null;
   passivityFiredInPhase: boolean;
+  lastWordsText: string | null;
+  lastWordsScheduled: boolean;
 };
 
 export type UIState = {
@@ -83,6 +90,8 @@ function initialMachine(): MachineState {
     pulseKey: 0,
     idleStartedAt: null,
     passivityFiredInPhase: false,
+    lastWordsText: null,
+    lastWordsScheduled: false,
   };
 }
 
@@ -104,6 +113,7 @@ function initialUI(): UIState {
 
 function deriveThought(m: MachineState): string | null {
   if (m.phase === 'idle' || m.phase === 'ended') return null;
+  if (m.phase === 'last-words') return m.lastWordsText;
   if (m.phase === 'release') return RELEASE.thought;
   if (m.phase === 'passivity') return PASSIVITY[m.phaseIdx] ?? null;
   if (m.phase === 'ambient') {
@@ -241,16 +251,50 @@ export function useGameState() {
       }
     }
 
-    if (m.doneness >= 1) {
-      m.running = false;
-      syncUI();
-      clearTimer();
-      timerRef.current = setTimeout(() => endGame(), END_FADE_DELAY);
-      return;
+    // Kypsyys jäätyy 95%:iin kun last-words on aikataulutettu —
+    // peli ei pääty ennen kuin viimeinen rivi on luettu.
+    if (m.lastWordsScheduled) {
+      m.doneness = Math.min(m.doneness, LAST_WORDS_TRIGGER_DONENESS);
+    }
+
+    // Last words -laukaisu kun kypsyys saavuttaa 95%:
+    // - Aikataulutetaan vain kerran (lastWordsScheduled-flag)
+    // - Lopullinen teksti valitaan triggerLastWords-funktiossa
+    //   peace-arvon perusteella (joka voi vielä muuttua valinnalla)
+    if (
+      !m.lastWordsScheduled &&
+      m.doneness >= LAST_WORDS_TRIGGER_DONENESS
+    ) {
+      m.lastWordsScheduled = true;
+      // Jos pelaaja ei ole keskellä mitään tärkeää, siirrytään heti.
+      // Muuten odotetaan että showNextPrompt tai choose laukaisee.
+      if (
+        !m.waitingChoice &&
+        m.phase !== 'passivity' &&
+        m.phase !== 'release'
+      ) {
+        triggerLastWords();
+      }
     }
 
     syncUI();
     rafRef.current = requestAnimationFrame(tick);
+  }
+
+  // Aloita last-words-näyttö: vaihda tila, näytä rivi ja aikatauluta
+  // siirtyminen End-ruutuun.
+  function triggerLastWords() {
+    const m = machineRef.current;
+    if (m.phase === 'last-words' || m.phase === 'ended') return;
+
+    clearTimer();
+    m.phase = 'last-words';
+    m.waitingChoice = false;
+    m.idleStartedAt = null;
+    m.lastWordsText = pickLastWords(m.peace); // tuoreet peace-arvot
+    syncUI();
+
+    timerRef.current = setTimeout(() => endGame(), LAST_WORDS_DISPLAY_MS);
   }
 
   function schedulePrompt(delay: number) {
@@ -262,12 +306,19 @@ export function useGameState() {
     const m = machineRef.current;
     if (!m.running) return;
 
+    // Jos last-words on jo aikataulutettu, siirrytään suoraan siihen
+    // sen sijaan että näytettäisiin uutta promptia tai ambienttia.
+    if (m.lastWordsScheduled) {
+      triggerLastWords();
+      return;
+    }
+
     // Vaihe 5 + mielenrauha ≥ 95 → tarjoa vapautuminen (kerran)
     if (m.phaseIdx === 4 && m.peace >= 95 && !m.released) {
       m.released = true;
       m.phase = 'release';
       m.waitingChoice = true;
-      m.idleStartedAt = null; // release-valinnalla ei ole passivity-mekaniikkaa
+      m.idleStartedAt = null;
       syncUI();
       return;
     }

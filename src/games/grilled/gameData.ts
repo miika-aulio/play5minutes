@@ -272,3 +272,24 @@ export const PASSIVITY: string[] = [
   // Phase 4: Acceptance
   'To not decide is also to decide. I see that now.',
 ];
+
+// ═══════════════════════════════════════════════════════════════
+//  LAST WORDS (näytetään juuri ennen End-ruutua)
+// ═══════════════════════════════════════════════════════════════
+// Yksi viimeinen rivi joka kuljettaa pelaajan rauhallisesti loppuun.
+// Rivi valitaan peace-arvon mukaan, ei päätöskoodin — niin että
+// se voidaan näyttää ennen kuin lopullinen päätös on laskettu.
+//
+// LAST_WORDS_HIGH käytetään kun peace ≥ 70
+// LAST_WORDS_MID  käytetään kun peace 40–69
+// LAST_WORDS_LOW  käytetään kun peace < 40
+
+export const LAST_WORDS_HIGH = 'And so. The fire and I, together, end well.';
+export const LAST_WORDS_MID  = 'And so. The fire ends. And I.';
+export const LAST_WORDS_LOW  = 'And so. It ends as it was.';
+
+export function pickLastWords(peace: number): string {
+  if (peace >= 70) return LAST_WORDS_HIGH;
+  if (peace >= 40) return LAST_WORDS_MID;
+  return LAST_WORDS_LOW;
+}
