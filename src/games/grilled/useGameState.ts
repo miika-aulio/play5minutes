@@ -13,7 +13,7 @@ const PHASE_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8] as const;
 const FIRST_PROMPT_DELAY = 800;
 const NEXT_PROMPT_DELAY = 2200;
 const PHASE_ADVANCE_DELAY = 400;
-const AMBIENT_CYCLE_DELAY = 5500;
+const AMBIENT_CYCLE_DELAY = 9000;
 const END_FADE_DELAY = 1500;
 const RELEASE_FADE_DELAY = 1800;
 const ABSURDI_CHANCE = 0.03;
@@ -38,13 +38,14 @@ type MachineState = {
   phaseIdx: number;
   promptIdx: number;
   ambientIdx: number;
+  ambientOrder: number[];               // sekoitettu järjestys ambient-rivien indekseistä
   choicesMade: number;
   waitingChoice: boolean;
   released: boolean;
   endingKey: EndingKey | null;
   pulseKey: number;
-  idleStartedAt: number | null;         // milloin nykyinen odotus alkoi
-  passivityFiredInPhase: boolean;       // onko passivity-monologi näytetty tässä vaiheessa
+  idleStartedAt: number | null;
+  passivityFiredInPhase: boolean;
 };
 
 export type UIState = {
@@ -74,6 +75,7 @@ function initialMachine(): MachineState {
     phaseIdx: 0,
     promptIdx: 0,
     ambientIdx: 0,
+    ambientOrder: [],
     choicesMade: 0,
     waitingChoice: false,
     released: false,
@@ -106,11 +108,29 @@ function deriveThought(m: MachineState): string | null {
   if (m.phase === 'passivity') return PASSIVITY[m.phaseIdx] ?? null;
   if (m.phase === 'ambient') {
     const phase = PROMPTS[m.phaseIdx];
-    return phase.ambient[m.ambientIdx % phase.ambient.length];
+    if (!phase || phase.ambient.length === 0) return null;
+    // Käytä sekoitettua järjestystä jos käytettävissä, muuten suora indeksi
+    const orderLen = m.ambientOrder.length;
+    const realIdx =
+      orderLen > 0
+        ? m.ambientOrder[m.ambientIdx % orderLen]
+        : m.ambientIdx % phase.ambient.length;
+    return phase.ambient[realIdx];
   }
   const phase = PROMPTS[m.phaseIdx];
   const prompt = phase.prompts[m.promptIdx];
   return prompt ? prompt.text : null;
+}
+
+// Fisher-Yates shuffle — palauttaa uuden taulukon indeksejä [0..n-1]
+// satunnaisessa järjestyksessä.
+function shuffledIndices(n: number): number[] {
+  const arr = Array.from({ length: n }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function deriveChoices(m: MachineState): Choice[] | null {
@@ -214,6 +234,7 @@ export function useGameState() {
       m.phaseIdx = targetPhase;
       m.promptIdx = 0;
       m.ambientIdx = 0;
+      m.ambientOrder = shuffledIndices(PROMPTS[targetPhase].ambient.length);
       m.passivityFiredInPhase = false; // uusi vaihe → uusi passivity-kvoota
       if (!m.waitingChoice) {
         schedulePrompt(PHASE_ADVANCE_DELAY);
@@ -289,7 +310,11 @@ export function useGameState() {
 
   function start() {
     clearAll();
-    machineRef.current = { ...initialMachine(), running: true };
+    machineRef.current = {
+      ...initialMachine(),
+      running: true,
+      ambientOrder: shuffledIndices(PROMPTS[0].ambient.length),
+    };
     syncUI();
     lastTickRef.current = performance.now();
     rafRef.current = requestAnimationFrame(tick);

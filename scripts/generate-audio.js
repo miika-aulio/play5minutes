@@ -44,31 +44,56 @@ const PROMPTS = [
 
 // Ambient-rivit — tiedostonimet: a{phase}-{idx}.mp3
 const AMBIENT = [
+  // Phase 0: Denial (7 lines)
   [
     'The heat ripples.',
     'Bubbling, far off.',
     'This must be temporary.',
+    'A breeze. Or maybe nothing.',
+    'Someone is humming a tune I almost know.',
+    'The clock face is too far to read.',
+    'An empty plate waits, patient.',
   ],
+  // Phase 1: Anger (7 lines)
   [
     'Juice simmers on the surface.',
     'The shadow of the tongs shifts.',
     'Someone laughs, far away.',
+    'Salt collects in a cooling pool.',
+    'A mosquito tries the air. Decides against it.',
+    'Wind moves grease across the iron.',
+    'The radio plays a song I don\u2019t recognise.',
   ],
+  // Phase 2: Bargaining (7 lines)
   [
     'Smoke arcs upward.',
     'A clock ticks somewhere.',
     'A fly lands on the grill lid.',
+    'Smoke draws letters I cannot read.',
+    'Footsteps. They go elsewhere.',
+    'The day has been longer than yesterday.',
+    'Even the flies have plans.',
   ],
+  // Phase 3: Depression (7 lines)
   [
     'The coal crumbles slowly.',
     'The wind turns.',
     'Night settles over the city.',
+    'Light leaves the way it came.',
+    'Iron remembers nothing.',
+    'The next plate is already waiting.',
+    'Steam rises like a small forgetting.',
   ],
+  // Phase 4: Acceptance (8 lines, increasingly philosophical)
   [
     'The flame dances in its own measure.',
     'Silence sings.',
     'All that warms has once lived.',
     'This moment needs nothing added.',
+    'To be eaten is to be carried elsewhere.',
+    'I am the heat now. Or the heat is me.',
+    'Each fire is different. None is mine alone.',
+    'The world keeps cooking, with or without.',
   ],
 ];
 

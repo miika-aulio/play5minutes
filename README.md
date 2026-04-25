@@ -1,66 +1,62 @@
-# Grilled — yhdistetty patch: ambient-äänet + passiivisuus + yksinkertaistettu End
+# Ambient-laajennus + sekoitus + hidastus
 
-Kolme muutosta yhdessä paketissa.
+Korjaa kokemuksen jossa samat 3–4 ambient-riviä toistuvat muutamaan kertaan
+yhden vaiheen sisällä.
 
-## Sisältö
+## Muutokset
 
-### 1. Ambient-äänten luenta
-Aiemmin vain monologit luettiin ääneen. Nyt myös 16 ambient-riviä — ne kontemplatiiviset huomiot vaiheiden välissä ("The shadow of the tongs shifts." jne.) — soitetaan äänenä.
+### 1. Lisää sisältöä
+16 → 36 ambient-riviä yhteensä:
+- Denial: 3 → 7
+- Anger: 3 → 7
+- Bargaining: 3 → 7
+- Depression: 3 → 7
+- Acceptance: 4 → 8
 
-### 2. Passiivisuus-mekaniikka
-Jos pelaaja ei tee valintaa tarpeeksi pian:
-- **10 s jälkeen** peace alkaa laskea 1/sek
-- **18 s jälkeen** passivity-monologi ilmestyy (kerran per vaihe, havainto ei syytös)
-- Peli etenee automaattisesti seuraavaan prompttiin 4 s jälkeen
+Sävy progressoi: **konkreettiset havainnot alkuvaiheissa → poeettiset välivaiheissa → filosofiset Acceptanceessa**.
 
-Passivity-monologit per vaihe:
-| Vaihe | Teksti |
-|---|---|
-| I Denial | "I haven't answered myself. That is also an answer." |
-| II Anger | "Silence is not calm. It is just silence." |
-| III Bargaining | "I stopped making offers. Perhaps that was the only offer left." |
-| IV Depression | "I have been letting the moment choose for me." |
-| V Acceptance | "To not decide is also to decide. I see that now." |
+### 2. Sekoitus joka pelikerralla
+Fisher-Yates-sekoitus järjestää ambient-rivien indeksit
+satunnaisesti kun vaihe alkaa. Eri pelikerroilla ne tulevat eri järjestyksessä.
 
-### 3. End-ruudun yksinkertaistus
-Poistettu väliaikaisesti:
-- Nimen syöttö
-- Submit-nappi
-- Leaderboard-nappi
-
-Jäljelle jää vain päätös, proosa, stats ja "Another life". Supabase-koodi säilyy projektissa palautusta varten.
+### 3. Hidastettu tempo
+Ambient-kierto: 5.5 s → **9 s**. Antaa enemmän tilaa hetkeä — ja koska rivejä on
+yli kaksinkertainen määrä, toistoa tapahtuu paljon harvemmin.
 
 ## Tiedostot
 
 ```
-src/games/grilled/gameData.ts           (lisätty PASSIVITY-taulukko)
-src/games/grilled/useGameState.ts       (passiivisuus-mekaniikka)
-src/games/grilled/usePromptAudio.ts     (ambient + passivity -äänet)
-src/games/grilled/screens/EndScreen.tsx (yksinkertaistettu)
-scripts/generate-audio.js               (generoi kaikki 36 tiedostoa)
+src/games/grilled/gameData.ts        (laajennettu ambient-listat)
+src/games/grilled/useGameState.ts    (sekoitus + hidastus)
+scripts/generate-audio.js            (uudet ambient-rivit)
 ```
+
+`usePromptAudio.ts` ja `EndScreen.tsx` säilyvät edellisestä patchista —
+tässä paketissa niitä ei tarvitse korvata.
 
 ## Asennus
 
-### 1. Pura zippi projektikansioon
+### 1. Pura zippi
 
-Korvaa 5 tiedostoa yllä olevan listan mukaisesti.
+Korvaa 3 tiedostoa.
 
-### 2. Generoi uudet äänet
-
-Ambient- ja passivity-äänet (21 uutta tiedostoa yhteensä):
+### 2. Generoi uudet ambient-äänet
 
 ```
 set ELEVENLABS_API_KEY=oma_avain
-set ELEVENLABS_VOICE_ID=goT3UYdM9bhm0n2lmKQx
+set ELEVENLABS_VOICE_ID=jtE6dbPUTt2kchN89Uej
 node scripts\generate-audio.js
 ```
 
-Skripti ohittaa olemassa olevat 15 monologia ja generoi:
-- 16 ambient-tiedostoa (a0-0.mp3 … a4-3.mp3)
-- 5 passivity-tiedostoa (x0.mp3 … x4.mp3)
+Skripti ohittaa olemassa olevat 36 tiedostoa (15 monologia + 16 ambient + 5 passivity)
+ja generoi 20 uutta ambient-tiedostoa:
+- a0-3.mp3 … a0-6.mp3 (Denial 4 uutta)
+- a1-3.mp3 … a1-6.mp3 (Anger 4 uutta)
+- a2-3.mp3 … a2-6.mp3 (Bargaining 4 uutta)
+- a3-3.mp3 … a3-6.mp3 (Depression 4 uutta)
+- a4-4.mp3 … a4-7.mp3 (Acceptance 4 uutta)
 
-Yhteensä ~30–40 sek.
+Yhteensä ~30 sek.
 
 ### 3. Testaa paikallisesti
 
@@ -68,40 +64,50 @@ Yhteensä ~30–40 sek.
 npm run dev
 ```
 
-Testattavaa:
-- **Ambient-äänet**: pelaa jonkin vaiheen läpi (klikkaa kaikki 3 monologia), kuuntele kun ambient-kierto alkaa — jokaisen ambient-rivin pitäisi kuulua myös äänenä
-- **Passiivisuus**: klikkaa "Step onto the grill", älä tee valintaa — 10s kohdalla peace laskee, 18s kohdalla passivity-monologi ilmestyy ja kuuluu äänenä
-- **End-ruutu**: pelaa peli loppuun — End-ruudulta puuttuvat nimi-kenttä, Submit ja Leaderboard. Vain Another Life -nappi.
+Pelaa muutama vaihe läpi, kuuntele ambient-kierto. Eri pelikerroilla
+saman vaiheen rivit tulevat eri järjestyksessä, ja koska rivejä on enemmän
+ja tempo on hidastunut, toistoa tuntuu vähemmän.
 
 ### 4. Deployaa
 
 ```
 git add .
-git commit -m "Ambient audio, passivity mechanic, simplified end screen"
+git commit -m "Expand ambient pool, shuffle order, slower tempo"
 npm run build
 npx wrangler deploy
 ```
 
 ## Säätöjä
 
-Kaikki aikavakiot `useGameState.ts`:n yläosassa:
+`useGameState.ts`:n vakiossa `AMBIENT_CYCLE_DELAY` säätää tempoa millisekunteina.
+- 9000 (nykyinen): 9 s per rivi
+- 12000: 12 s, hyvin meditatiivinen
+- 7000: 7 s, mutta rivejä on nyt niin paljon että 9 s on hyvä lähtökohta
 
-```ts
-const IDLE_DECAY_AFTER_MS = 10000;        // peace-lasku alkaa
-const PASSIVITY_TRIGGER_AFTER_MS = 18000; // passivity-monologi
-const PASSIVITY_DISPLAY_MS = 4000;        // passivity-näkyvyys
-const IDLE_DECAY_RATE_PER_SEC = 1;        // peace-lasku/sek
-```
+## Sisältö joka vaiheelle
 
-Ääniasetukset `scripts/generate-audio.js`:ssä:
-- `PROMPT_SETTINGS` — monologit (stability 0.55, style 0.35)
-- `AMBIENT_SETTINGS` — ambient (stability 0.7, style 0.2, rauhallisempi)
-- `PASSIVITY_SETTINGS` — passivity (stability 0.65, style 0.3, välimaastossa)
+**Denial** (7) — arkinen, makkara yrittää selittää tilanteen pois:
+- "The heat ripples." / "Bubbling, far off." / "This must be temporary."
+- "A breeze. Or maybe nothing." / "Someone is humming a tune I almost know."
+- "The clock face is too far to read." / "An empty plate waits, patient."
 
-## Credittien käyttö ElevenLabsissa
+**Anger** (7) — tarkkoja havaintoja, makkara katsoo katkeroituneena:
+- "Juice simmers on the surface." / "The shadow of the tongs shifts." / "Someone laughs, far away."
+- "Salt collects in a cooling pool." / "A mosquito tries the air. Decides against it."
+- "Wind moves grease across the iron." / "The radio plays a song I don't recognise."
 
-Yhteensä noin 1200 creditiä uusiin ääniin. Ilmaistaso 10 000/kk kattaa helposti.
+**Bargaining** (7) — aikaa katsotaan ulkopuolelta, pieni reflektio alkaa:
+- "Smoke arcs upward." / "A clock ticks somewhere." / "A fly lands on the grill lid."
+- "Smoke draws letters I cannot read." / "Footsteps. They go elsewhere."
+- "The day has been longer than yesterday." / "Even the flies have plans."
 
-## Huomioita
+**Depression** (7) — konkreettinen mutta hiljaisempi, runollisempi:
+- "The coal crumbles slowly." / "The wind turns." / "Night settles over the city."
+- "Light leaves the way it came." / "Iron remembers nothing."
+- "The next plate is already waiting." / "Steam rises like a small forgetting."
 
-**Supabase-integraatio säilyy koodissa** — `src/shared/supabase.ts` ja `src/games/grilled/screens/LeaderboardScreen.tsx` ovat paikoillaan. Kun halutaan palauttaa nimi-syöttö ja tulostaulu End-ruudulle, EndScreen.tsx voidaan korvata aiemmalla versiolla.
+**Acceptance** (8) — filosofinen, kontemplatiivinen:
+- "The flame dances in its own measure." / "Silence sings."
+- "All that warms has once lived." / "This moment needs nothing added."
+- "To be eaten is to be carried elsewhere." / "I am the heat now. Or the heat is me."
+- "Each fire is different. None is mine alone." / "The world keeps cooking, with or without."
