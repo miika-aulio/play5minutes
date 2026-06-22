@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { EndingKey } from './content';
 import type { Choice } from './gameData';
 import { PROMPTS, RELEASE, PASSIVITY, pickLastWords } from './gameData';
+import { isPromptAudioPlaying } from './usePromptAudio';
 
 // ═══════════════════════════════════════════════════════════════
 //  VAKIOT
@@ -18,10 +19,12 @@ const RELEASE_FADE_DELAY = 1800;
 const ABSURDI_CHANCE = 0.03;
 
 // Last words: kun kypsyys saavuttaa 95%, peli odottaa nykyisen
-// ambient/monologin loppua, sitten näyttää viimeisen rivin
-// ennen End-ruutua.
+// ambient/monologin loppua, sitten näyttää viimeisen rivin.
+// Samalla ruutu fadettuu mustaksi 3s kuluessa, ääni puhuu fade-ajan,
+// ja vasta sen jälkeen siirrytään End-ruutuun.
 const LAST_WORDS_TRIGGER_DONENESS = 0.95;
-const LAST_WORDS_DISPLAY_MS = 6000;
+const LAST_WORDS_FADE_MS = 3000;       // ruutu fadettuu mustaksi 3s ajan
+const LAST_WORDS_HOLD_MS = 1500;       // 1.5s mustaa hiljaisuutta jälkeen
 
 // Passiivisuus-mekaniikka
 const IDLE_DECAY_AFTER_MS = 10000;        // 10s passiivisuuden jälkeen peace alkaa laskea
@@ -53,6 +56,8 @@ type MachineState = {
   passivityFiredInPhase: boolean;
   lastWordsText: string | null;
   lastWordsScheduled: boolean;
+  phaseChangePending: number | null;
+  fadeStartedAt: number | null;        // milloin fade-to-black alkoi (last-words)
 };
 
 export type UIState = {
@@ -67,6 +72,7 @@ export type UIState = {
   waitingChoice: boolean;
   endingKey: EndingKey | null;
   pulseKey: number;
+  fadeProgress: number;     // 0..1, last-words fade-to-black
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -92,6 +98,8 @@ function initialMachine(): MachineState {
     passivityFiredInPhase: false,
     lastWordsText: null,
     lastWordsScheduled: false,
+    phaseChangePending: null,
+    fadeStartedAt: null,
   };
 }
 
@@ -108,6 +116,7 @@ function initialUI(): UIState {
     waitingChoice: false,
     endingKey: null,
     pulseKey: 0,
+    fadeProgress: 0,
   };
 }
 
@@ -189,6 +198,12 @@ export function useGameState() {
 
   function syncUI() {
     const m = machineRef.current;
+    // Laske fade-edistyminen 0..1 fadeStartedAt-aikaleimasta
+    let fadeProgress = 0;
+    if (m.fadeStartedAt !== null) {
+      const elapsed = performance.now() - m.fadeStartedAt;
+      fadeProgress = Math.min(1, elapsed / LAST_WORDS_FADE_MS);
+    }
     setUI({
       doneness: m.doneness,
       peace: m.peace,
@@ -201,6 +216,7 @@ export function useGameState() {
       waitingChoice: m.waitingChoice,
       endingKey: m.endingKey,
       pulseKey: m.pulseKey,
+      fadeProgress,
     });
   }
 
@@ -208,7 +224,7 @@ export function useGameState() {
     const m = machineRef.current;
     if (!m.running) return;
 
-    const dt = (now - lastTickRef.current) / 1000;
+    const dt = Math.min((now - lastTickRef.current) / 1000, 1);
     lastTickRef.current = now;
     m.doneness = Math.min(1, m.doneness + dt / TOTAL_SECONDS);
 
@@ -228,6 +244,7 @@ export function useGameState() {
       // Passivity-monologi 18 sekunnin jälkeen (kerran per vaihe)
       if (idleMs > PASSIVITY_TRIGGER_AFTER_MS && !m.passivityFiredInPhase) {
         firePassivity();
+        rafRef.current = requestAnimationFrame(tick);
         return;
       }
     }
@@ -241,13 +258,14 @@ export function useGameState() {
       }
     }
     if (targetPhase > m.phaseIdx) {
-      m.phaseIdx = targetPhase;
-      m.promptIdx = 0;
-      m.ambientIdx = 0;
-      m.ambientOrder = shuffledIndices(PROMPTS[targetPhase].ambient.length);
-      m.passivityFiredInPhase = false; // uusi vaihe → uusi passivity-kvoota
-      if (!m.waitingChoice) {
-        schedulePrompt(PHASE_ADVANCE_DELAY);
+      // Deferred: ambient, passivity ja mid-prompt odottavat seuraavaa
+      // showNextPrompt-kutsua ennen vaiheen vaihtamista. Näin vaihtoon
+      // liittyvä promptIdx-nollaus tapahtuu oikeaan aikaan eikä choose()
+      // ohita uuden vaiheen ensimmäistä monologia.
+      if (m.phase === 'ambient' || m.phase === 'passivity' || m.waitingChoice) {
+        m.phaseChangePending = targetPhase;
+      } else {
+        applyPhaseChange(targetPhase);
       }
     }
 
@@ -266,13 +284,12 @@ export function useGameState() {
       m.doneness >= LAST_WORDS_TRIGGER_DONENESS
     ) {
       m.lastWordsScheduled = true;
-      // Jos pelaaja ei ole keskellä mitään tärkeää, siirrytään heti.
-      // Muuten odotetaan että showNextPrompt tai choose laukaisee.
-      if (
-        !m.waitingChoice &&
-        m.phase !== 'passivity' &&
-        m.phase !== 'release'
-      ) {
+      // Passivity ja mid-prompt odottavat seuraavaa showNextPrompt-kutsua.
+      // Release-tilassa pelaaja on saanut mahdollisuutensa — siirrytään heti.
+      if (m.phase === 'passivity' || (m.waitingChoice && m.phase === 'prompt')) {
+        // showNextPrompt tai choose kutsuvat triggerLastWords myöhemmin
+      } else {
+        if (m.phase === 'release') m.waitingChoice = false;
         triggerLastWords();
       }
     }
@@ -292,9 +309,20 @@ export function useGameState() {
     m.waitingChoice = false;
     m.idleStartedAt = null;
     m.lastWordsText = pickLastWords(m.peace); // tuoreet peace-arvot
+    m.fadeStartedAt = performance.now();      // aloita fade-to-black samanaikaisesti
     syncUI();
 
-    timerRef.current = setTimeout(() => endGame(), LAST_WORDS_DISPLAY_MS);
+    // Odota vähintään fade-animaatio (3s), sitten ääniklippi loppuun
+    // (polling — ei oletuksia tiedoston pituudesta), sitten 1.5s hiljaisuutta.
+    function waitForEnd() {
+      const fadeElapsed = performance.now() - (machineRef.current.fadeStartedAt ?? 0);
+      if (fadeElapsed < LAST_WORDS_FADE_MS || isPromptAudioPlaying()) {
+        timerRef.current = setTimeout(waitForEnd, 100);
+      } else {
+        timerRef.current = setTimeout(() => endGame(), LAST_WORDS_HOLD_MS);
+      }
+    }
+    timerRef.current = setTimeout(waitForEnd, 100);
   }
 
   function schedulePrompt(delay: number) {
@@ -302,9 +330,35 @@ export function useGameState() {
     timerRef.current = setTimeout(showNextPrompt, delay);
   }
 
+  // Suorittaa vaiheen vaihdon. Tätä kutsutaan joko suoraan tickistä
+  // (jos pelaaja ei ole ambient/passivity-tilassa) tai showNextPrompt:sta
+  // kun viivästetty vaihto on aikataulutettu.
+  function applyPhaseChange(targetPhase: number) {
+    const m = machineRef.current;
+    m.phaseIdx = targetPhase;
+    m.promptIdx = 0;
+    m.ambientIdx = 0;
+    m.ambientOrder = shuffledIndices(PROMPTS[targetPhase].ambient.length);
+    m.passivityFiredInPhase = false;
+    m.phaseChangePending = null;
+    if (!m.waitingChoice) {
+      schedulePrompt(PHASE_ADVANCE_DELAY);
+    }
+  }
+
   function showNextPrompt() {
     const m = machineRef.current;
     if (!m.running) return;
+
+    // Jos vaiheen vaihto on viivästetty (esim. odotettiin että ambient-rivi
+    // ehtii loppua), suorita se nyt ennen muuta logiikkaa.
+    if (m.phaseChangePending !== null && m.phaseChangePending > m.phaseIdx) {
+      const target = m.phaseChangePending;
+      applyPhaseChange(target);
+      // applyPhaseChange aikatauluttaa seuraavan promptin omilla viiveillään,
+      // joten poistutaan tästä funktiosta.
+      return;
+    }
 
     // Jos last-words on jo aikataulutettu, siirrytään suoraan siihen
     // sen sijaan että näytettäisiin uutta promptia tai ambienttia.

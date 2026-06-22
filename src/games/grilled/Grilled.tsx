@@ -17,7 +17,6 @@ export default function Grilled() {
   const grill = useGrillAudio();
   const L = STRINGS;
 
-  // Monologin ääni — sama mute-tila kuin grill-äänellä
   usePromptAudio(ui, grill.muted);
 
   useEffect(() => {
@@ -33,7 +32,7 @@ export default function Grilled() {
       setScreen('end');
       grill.stop();
     }
-  }, [ui.phase, screen, grill]);
+  }, [ui.phase, screen]); // grill pois — uusi objektiliteraali joka renderöinnissä aiheuttaisi turhat ajokerrat
 
   function handleBegin() {
     start();
@@ -46,6 +45,20 @@ export default function Grilled() {
     grill.stop();
     setScreen('title');
   }
+
+  // Fade-to-black -overlay last-words-vaiheessa.
+  // Näkyy vain kun peli on play-ruudussa ja fade on käynnissä.
+  const fadeOverlay = screen === 'play' && ui.fadeProgress > 0 && (
+    <div
+      className="grilled-fade-overlay"
+      style={{ opacity: ui.fadeProgress }}
+      aria-hidden="true"
+    >
+      {ui.phase === 'last-words' && ui.thought && (
+        <div className="grilled-last-words">{ui.thought}</div>
+      )}
+    </div>
+  );
 
   return (
     <div className="grilled-container">
@@ -85,6 +98,8 @@ export default function Grilled() {
           onBack={() => setScreen(ui.endingKey ? 'end' : 'title')}
         />
       )}
+
+      {fadeOverlay}
     </div>
   );
 }
