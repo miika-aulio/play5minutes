@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const url = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder';
 
-if (!url || !anonKey) {
+if (!import.meta.env.VITE_SUPABASE_URL) {
   console.warn('Supabase env vars missing. Check .env.local.');
 }
 
+// createClient vaatii ei-tyhjän URL:n — placeholder estää kaatumisen tuotannossa
+// kun leaderboard on piilotettu eikä Supabasia kutsuta oikeasti.
 export const supabase = createClient(url, anonKey);
 
 export type ScoreRow = {
