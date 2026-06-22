@@ -14,7 +14,7 @@ const PHASE_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8] as const;
 const FIRST_PROMPT_DELAY = 800;
 const NEXT_PROMPT_DELAY = 2200;
 const PHASE_ADVANCE_DELAY = 1500;
-const AMBIENT_CYCLE_DELAY = 9000;
+const AMBIENT_CYCLE_DELAY = 7000;
 const RELEASE_FADE_DELAY = 1800;
 const ABSURDI_CHANCE = 0.03;
 
@@ -29,7 +29,7 @@ const LAST_WORDS_HOLD_MS = 1500;       // 1.5s mustaa hiljaisuutta jälkeen
 // Passiivisuus-mekaniikka
 const IDLE_DECAY_AFTER_MS = 10000;        // 10s passiivisuuden jälkeen peace alkaa laskea
 const PASSIVITY_TRIGGER_AFTER_MS = 18000; // 18s jälkeen laukeaa passivity-monologi (kerran per vaihe)
-const PASSIVITY_DISPLAY_MS = 4000;        // passivity-monologi näkyy ~4s ennen etenemistä
+const PASSIVITY_DISPLAY_MS = 6000;        // passivity-monologi näkyy ~6s ennen etenemistä
 const IDLE_DECAY_RATE_PER_SEC = 1;        // peace-lasku / sek passiivisuudessa
 
 // ═══════════════════════════════════════════════════════════════
