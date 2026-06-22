@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "play5minutes",
+  "account_id": "eeb75c950083fec067eb9b9cc69f3459",
   "compatibility_date": "2025-04-01",
   "assets": {
     "directory": "./dist",
