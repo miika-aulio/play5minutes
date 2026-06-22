@@ -1,0 +1,53 @@
+# Buildaa ja deployaa play5minutes Cloudflare Workersille joka pushilla mainiin.
+# Sijoita tämä tiedosto polkuun: .github/workflows/deploy.yml
+#
+# Vaaditut GitHub-secretit (repo → Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — Cloudflare-token, jolla on "Edit Cloudflare Workers" -oikeus
+#   CLOUDFLARE_ACCOUNT_ID  — (valinnainen, jos account_id on jo wrangler.jsonc:ssa)
+#
+# Tokenin luonti: Cloudflare dashboard → My Profile → API Tokens → Create Token
+#   → "Edit Cloudflare Workers" -template.
+
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # mahdollistaa manuaalisen ajon GitHubin Actions-välilehdeltä
+
+# Peruuta käynnissä oleva deploy jos uusi push tulee — vain viimeisin tila menee tuotantoon.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        # Jos Vite tarvitsee Supabase-arvot build-aikaan (import.meta.env.VITE_*),
+        # poista alla olevien rivien kommentit ja lisää arvot GitHub-secreteiksi/vareiksi.
+        # env:
+        #   VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+        #   VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: deploy
